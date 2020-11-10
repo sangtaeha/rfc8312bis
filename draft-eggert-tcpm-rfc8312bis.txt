@@ -2,7 +2,7 @@
 
 
 
-TCPM                                                           L. Eggert
+TCPM                                                      L. Eggert, Ed.
 Internet-Draft                                          R. Scheffenegger
 Obsoletes: 8312 (if approved)                                     NetApp
 Intended status: Standards Track                                   L. Xu
@@ -95,11 +95,11 @@ Table of Contents
      4.4.  Convex Region . . . . . . . . . . . . . . . . . . . . . .   9
      4.5.  Multiplicative Decrease . . . . . . . . . . . . . . . . .   9
      4.6.  Fast Convergence  . . . . . . . . . . . . . . . . . . . .  10
-     4.7.  Timeout . . . . . . . . . . . . . . . . . . . . . . . . .  11
+     4.7.  Timeout . . . . . . . . . . . . . . . . . . . . . . . . .  10
      4.8.  Slow Start  . . . . . . . . . . . . . . . . . . . . . . .  11
    5.  Discussion  . . . . . . . . . . . . . . . . . . . . . . . . .  11
      5.1.  Fairness to Standard TCP  . . . . . . . . . . . . . . . .  12
-     5.2.  Using Spare Capacity  . . . . . . . . . . . . . . . . . .  14
+     5.2.  Using Spare Capacity  . . . . . . . . . . . . . . . . . .  13
      5.3.  Difficult Environments  . . . . . . . . . . . . . . . . .  14
      5.4.  Investigating a Range of Environments . . . . . . . . . .  14
      5.5.  Protection against Congestion Collapse  . . . . . . . . .  15
@@ -119,7 +119,7 @@ Internet-Draft                    CUBIC                    November 2020
      5.8.  Behavior for Application-Limited Flows  . . . . . . . . .  15
      5.9.  Responses to Sudden or Transient Events . . . . . . . . .  15
      5.10. Incremental Deployment  . . . . . . . . . . . . . . . . .  15
-   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  16
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  15
    7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  16
    8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  16
      8.1.  Normative References  . . . . . . . . . . . . . . . . . .  16
@@ -365,9 +365,7 @@ Internet-Draft                    CUBIC                    November 2020
 
    CUBIC uses the following window increase function:
 
-       W_cubic(t) = C * (t - K)^3 + W_max
-
-                                  Figure 1
+       W_cubic(t) = C * (t - K)^3 + W_max                (Eq. 1)
 
    where C is a constant fixed to determine the aggressiveness of window
    increase in high BDP networks, t is the elapsed time from the
@@ -376,16 +374,18 @@ Internet-Draft                    CUBIC                    November 2020
    size to W_max if there are no further congestion events and is
    calculated using the following equation:
 
-       K = cubic_root(W_max * (1 - beta_cubic) / C)
-
-                                  Figure 2
+       K = cubic_root(W_max * (1 - beta_cubic) / C)      (Eq. 2)
 
    where beta_cubic is the CUBIC multiplication decrease factor, that
    is, when a congestion event is detected, CUBIC reduces its cwnd to
    W_cubic(0)=W_max*beta_cubic.  We discuss how we set beta_cubic in
    Section 4.5 and how we set C in Section 5.
 
-
+   Upon receiving an ACK during congestion avoidance, CUBIC computes the
+   window increase rate during the next RTT period using Eq. 1.  It sets
+   W_cubic(t+RTT) as the candidate target value of the congestion
+   window, where RTT is the weighted average RTT calculated by Standard
+   TCP.
 
 
 
@@ -393,12 +393,6 @@ Eggert, et al.             Expires 14 May 2021                  [Page 7]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-   Upon receiving an ACK during congestion avoidance, CUBIC computes the
-   window increase rate during the next RTT period using Figure 1.  It
-   sets W_cubic(t+RTT) as the candidate target value of the congestion
-   window, where RTT is the weighted average RTT calculated by Standard
-   TCP.
 
    Depending on the value of the current congestion window size cwnd,
    CUBIC runs in three different modes.
@@ -427,21 +421,27 @@ Internet-Draft                    CUBIC                    November 2020
    an additive factor of alpha_aimd (segments per RTT) and a
    multiplicative factor of beta_aimd, denoted by AIMD(alpha_aimd,
    beta_aimd).  Specifically, the average congestion window size of
-   AIMD(alpha_aimd, beta_aimd) can be calculated using Figure 3.  The
+   AIMD(alpha_aimd, beta_aimd) can be calculated using Eq. 3.  The
    analysis shows that AIMD(alpha_aimd, beta_aimd) with
    alpha_aimd=3*(1-beta_aimd)/(1+beta_aimd) achieves the same average
    window size as Standard TCP that uses AIMD(1, 0.5).
 
        AVG_W_aimd = [alpha_aimd * (1 + beta_aimd) /
-                     (2 * (1 - beta_aimd) * p)]^0.5
+                     (2 * (1 - beta_aimd) * p)]^0.5      (Eq. 3)
 
-                                  Figure 3
-
-   Based on the above analysis, CUBIC uses Figure 4 to estimate the
-   window size W_est of AIMD(alpha_aimd, beta_aimd) with
+   Based on the above analysis, CUBIC uses Eq. 4 to estimate the window
+   size W_est of AIMD(alpha_aimd, beta_aimd) with
    alpha_aimd=3*(1-beta_cubic)/(1+beta_cubic) and beta_aimd=beta_cubic,
    which achieves the same average window size as Standard TCP.  When
    receiving an ACK in congestion avoidance (cwnd could be greater than
+   or less than W_max), CUBIC checks whether W_cubic(t) is less than
+   W_est(t).  If so, CUBIC is in the TCP-friendly region and cwnd SHOULD
+   be set to W_est(t) at each reception of an ACK.
+
+       W_est(t) = W_max * beta_cubic +
+                  [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
+                  (t / RTT)                              (Eq. 4)
+
 
 
 
@@ -450,22 +450,13 @@ Eggert, et al.             Expires 14 May 2021                  [Page 8]
 Internet-Draft                    CUBIC                    November 2020
 
 
-   or less than W_max), CUBIC checks whether W_cubic(t) is less than
-   W_est(t).  If so, CUBIC is in the TCP-friendly region and cwnd SHOULD
-   be set to W_est(t) at each reception of an ACK.
-
-       W_est(t) = W_max * beta_cubic +
-                  [3 * (1 - beta_cubic) / (1 + beta_cubic)] * (t / RTT)
-
-                                  Figure 4
-
 4.3.  Concave Region
 
    When receiving an ACK in congestion avoidance, if CUBIC is not in the
    TCP-friendly region and cwnd is less than W_max, then CUBIC is in the
    concave region.  In this region, cwnd MUST be incremented by
    (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-   W_cubic(t+RTT) is calculated using Figure 1.
+   W_cubic(t+RTT) is calculated using Eq. 1.
 
 4.4.  Convex Region
 
@@ -483,7 +474,7 @@ Internet-Draft                    CUBIC                    November 2020
    this region the "maximum probing phase" since CUBIC is searching for
    a new W_max.  In this region, cwnd MUST be incremented by
    (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-   W_cubic(t+RTT) is calculated using Figure 1.
+   W_cubic(t+RTT) is calculated using Eq. 1.
 
 4.5.  Multiplicative Decrease
 
@@ -497,6 +488,15 @@ Internet-Draft                    CUBIC                    November 2020
        ssthresh = max(ssthresh, 2)  // threshold is at least 2 MSS
        cwnd = cwnd * beta_cubic     // window reduction
 
+   A side effect of setting beta_cubic to a value bigger than 0.5 is
+   slower convergence.  We believe that while a more adaptive setting of
+   beta_cubic could result in faster convergence, it will make the
+   analysis of CUBIC much harder.  This adaptive adjustment of
+   beta_cubic is an item for the next version of CUBIC.
+
+
+
+
 
 
 
@@ -505,12 +505,6 @@ Eggert, et al.             Expires 14 May 2021                  [Page 9]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-   A side effect of setting beta_cubic to a value bigger than 0.5 is
-   slower convergence.  We believe that while a more adaptive setting of
-   beta_cubic could result in faster convergence, it will make the
-   analysis of CUBIC much harder.  This adaptive adjustment of
-   beta_cubic is an item for the next version of CUBIC.
 
 4.6.  Fast Convergence
 
@@ -552,6 +546,12 @@ Internet-Draft                    CUBIC                    November 2020
    CUBIC flow and without any other traffic, the fast convergence SHOULD
    be disabled.
 
+4.7.  Timeout
+
+   In case of timeout, CUBIC follows Standard TCP to reduce cwnd
+   [RFC5681], but sets ssthresh using beta_cubic (same as in
+   Section 4.5) that is different from Standard TCP [RFC5681].
+
 
 
 
@@ -562,14 +562,8 @@ Eggert, et al.             Expires 14 May 2021                 [Page 10]
 Internet-Draft                    CUBIC                    November 2020
 
 
-4.7.  Timeout
-
-   In case of timeout, CUBIC follows Standard TCP to reduce cwnd
-   [RFC5681], but sets ssthresh using beta_cubic (same as in
-   Section 4.5) that is different from Standard TCP [RFC5681].
-
    During the first congestion avoidance after a timeout, CUBIC
-   increases its congestion window size using Figure 1, where t is the
+   increases its congestion window size using Eq. 1, where t is the
    elapsed time since the beginning of the current congestion avoidance,
    K is set to 0, and W_max is set to the congestion window size at the
    beginning of the current congestion avoidance.
@@ -585,11 +579,10 @@ Internet-Draft                    CUBIC                    November 2020
    In the case when CUBIC runs the hybrid slow start [HR08], it may exit
    the first slow start without incurring any packet loss and thus W_max
    is undefined.  In this special case, CUBIC switches to congestion
-   avoidance and increases its congestion window size using Figure 1,
-   where t is the elapsed time since the beginning of the current
-   congestion avoidance, K is set to 0, and W_max is set to the
-   congestion window size at the beginning of the current congestion
-   avoidance.
+   avoidance and increases its congestion window size using Eq. 1, where
+   t is the elapsed time since the beginning of the current congestion
+   avoidance, K is set to 0, and W_max is set to the congestion window
+   size at the beginning of the current congestion avoidance.
 
 5.  Discussion
 
@@ -604,11 +597,18 @@ Internet-Draft                    CUBIC                    November 2020
 
        AVG_W_cubic = [C * (3 + beta_cubic) /
                       (4 * (1 - beta_cubic))]^0.25 *
-                     (RTT^0.75) / (p^0.75)
-
-                                  Figure 5
+                     (RTT^0.75) / (p^0.75)               (Eq. 5)
 
    With beta_cubic set to 0.7, the above formula is reduced to:
+
+       AVG_W_cubic = (C * 3.7 / 1.2)^0.25 *
+                     (RTT^0.75) / (p^0.75)               (Eq. 6)
+
+   We will determine the value of C in the following subsection using
+   Eq. 6.
+
+
+
 
 
 
@@ -617,13 +617,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 11]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-       AVG_W_cubic = (C * 3.7 / 1.2)^0.25 * (RTT^0.75) / (p^0.75)
-
-                                  Figure 6
-
-   We will determine the value of C in the following subsection using
-   Figure 6.
 
 5.1.  Fairness to Standard TCP
 
@@ -641,8 +634,8 @@ Internet-Draft                    CUBIC                    November 2020
    above two types of networks.  The following two tables show the
    average window sizes of Standard TCP, HSTCP, and CUBIC.  The average
    window sizes of Standard TCP and HSTCP are from [RFC3649].  The
-   average window size of CUBIC is calculated using Figure 6 and the
-   CUBIC TCP-friendly region for three different values of C.
+   average window size of CUBIC is calculated using Eq. 6 and the CUBIC
+   TCP-friendly region for three different values of C.
 
    +--------+----------+-----------+------------+-----------+----------+
    |   Loss |  Average |   Average |      CUBIC |     CUBIC |    CUBIC |
@@ -659,11 +652,18 @@ Internet-Draft                    CUBIC                    November 2020
 
                                   Table 1
 
-                                  Figure 7
-
-   Figure 7 describes the response function of Standard TCP, HSTCP, and
+   Table 1 describes the response function of Standard TCP, HSTCP, and
    CUBIC in networks with RTT = 0.1 seconds.  The average window size is
    in MSS-sized segments.
+
+
+
+
+
+
+
+
+
 
 
 
@@ -689,9 +689,7 @@ Internet-Draft                    CUBIC                    November 2020
 
                                   Table 2
 
-                                  Figure 8
-
-   Figure 8 describes the response function of Standard TCP, HSTCP, and
+   Table 2 describes the response function of Standard TCP, HSTCP, and
    CUBIC in networks with RTT = 0.01 seconds.  The average window size
    is in MSS-sized segments.
 
@@ -712,15 +710,17 @@ Internet-Draft                    CUBIC                    November 2020
    and high-bandwidth networks.  Based on these observations and our
    experiments, we find C=0.4 gives a good balance between TCP-
    friendliness and aggressiveness of window increase.  Therefore, C
-   SHOULD be set to 0.4.  With C set to 0.4, Figure 6 is reduced to:
+   SHOULD be set to 0.4.  With C set to 0.4, Eq. 6 is reduced to:
 
-       AVG_W_cubic = 1.054 * (RTT^0.75) / (p^0.75)
+       AVG_W_cubic = 1.054 * (RTT^0.75) / (p^0.75)       (Eq. 7)
 
-                                  Figure 9
+   Eq. 7 is then used in the next subsection to show the scalability of
+   CUBIC.
 
-   Figure 9 is then used in the next subsection to show the scalability
-   of CUBIC.
+5.2.  Using Spare Capacity
 
+   CUBIC uses a more aggressive window increase function than Standard
+   TCP under long RTT and high-bandwidth networks.
 
 
 
@@ -729,11 +729,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 13]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-5.2.  Using Spare Capacity
-
-   CUBIC uses a more aggressive window increase function than Standard
-   TCP under long RTT and high-bandwidth networks.
 
    The following table shows that to achieve the 10 Gbps rate, Standard
    TCP requires a packet loss rate of 2.0e-10, while CUBIC requires a
@@ -750,8 +745,6 @@ Internet-Draft                    CUBIC                    November 2020
       +------------------+-----------+---------+---------+---------+
 
                                   Table 3
-
-                                 Figure 10
 
    Table 3 describes the required packet loss rate for Standard TCP,
    HSTCP, and CUBIC to achieve a certain throughput.  We use 1500-byte
@@ -778,6 +771,13 @@ Internet-Draft                    CUBIC                    November 2020
    faster window increase function and bigger multiplicative decrease
    factor) than Standard TCP in fast and long-distance networks, it can
    fill large drop-tail buffers more quickly than Standard TCP and
+   increase the risk of a standing queue [RFC8511].  In this case,
+   proper queue sizing and management [RFC7567] could be used to reduce
+   the packet queuing delay.
+
+
+
+
 
 
 
@@ -785,10 +785,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 14]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-   increase the risk of a standing queue [RFC8511].  In this case,
-   proper queue sizing and management [RFC7567] could be used to reduce
-   the packet queuing delay.
 
 5.5.  Protection against Congestion Collapse
 
@@ -814,9 +810,9 @@ Internet-Draft                    CUBIC                    November 2020
    CUBIC does not raise its congestion window size if the flow is
    currently limited by the application instead of the congestion
    window.  In case of long periods when cwnd has not been updated due
-   to the application rate limit, such as idle periods, t in Figure 1
-   MUST NOT include these periods; otherwise, W_cubic(t) might be very
-   high after restarting from these periods.
+   to the application rate limit, such as idle periods, t in Eq. 1 MUST
+   NOT include these periods; otherwise, W_cubic(t) might be very high
+   after restarting from these periods.
 
 5.9.  Responses to Sudden or Transient Events
 
@@ -831,7 +827,11 @@ Internet-Draft                    CUBIC                    November 2020
    not require any changes to the routers and does not require any
    assistance from the routers.
 
+6.  Security Considerations
 
+   This proposal makes no changes to the underlying security of TCP.
+   More information about TCP security concerns can be found in
+   [RFC5681].
 
 
 
@@ -841,12 +841,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 15]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-6.  Security Considerations
-
-   This proposal makes no changes to the underlying security of TCP.
-   More information about TCP security concerns can be found in
-   [RFC5681].
 
 7.  IANA Considerations
 
@@ -889,6 +883,12 @@ Internet-Draft                    CUBIC                    November 2020
               RFC 6582, DOI 10.17487/RFC6582, April 2012,
               <https://www.rfc-editor.org/info/rfc6582>.
 
+   [RFC6675]  Blanton, E., Allman, M., Wang, L., Jarvinen, I., Kojo, M.,
+              and Y. Nishida, "A Conservative Loss Recovery Algorithm
+              Based on Selective Acknowledgment (SACK) for TCP",
+              RFC 6675, DOI 10.17487/RFC6675, August 2012,
+              <https://www.rfc-editor.org/info/rfc6675>.
+
 
 
 
@@ -897,12 +897,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 16]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-   [RFC6675]  Blanton, E., Allman, M., Wang, L., Jarvinen, I., Kojo, M.,
-              and Y. Nishida, "A Conservative Loss Recovery Algorithm
-              Based on Selective Acknowledgment (SACK) for TCP",
-              RFC 6675, DOI 10.17487/RFC6675, August 2012,
-              <https://www.rfc-editor.org/info/rfc6675>.
 
    [RFC7567]  Baker, F., Ed. and G. Fairhurst, Ed., "IETF
               Recommendations Regarding Active Queue Management",
@@ -944,6 +938,12 @@ Internet-Draft                    CUBIC                    November 2020
               <https://pdfs.semanticscholar.org/25e9/
               ef3f03315782c7f1cbcd31b587857adae7d1.pdf>.
 
+   [HRX08]    Ha, S., Rhee, I., and L. Xu, "CUBIC: a new TCP-friendly
+              high-speed TCP variant", ACM SIGOPS Operating Systems
+              Review Vol. 42, pp. 64-74, DOI 10.1145/1400097.1400105,
+              July 2008, <https://doi.org/10.1145/1400097.1400105>.
+
+
 
 
 
@@ -953,11 +953,6 @@ Eggert, et al.             Expires 14 May 2021                 [Page 17]
 
 Internet-Draft                    CUBIC                    November 2020
 
-
-   [HRX08]    Ha, S., Rhee, I., and L. Xu, "CUBIC: a new TCP-friendly
-              high-speed TCP variant", ACM SIGOPS Operating Systems
-              Review Vol. 42, pp. 64-74, DOI 10.1145/1400097.1400105,
-              July 2008, <https://doi.org/10.1145/1400097.1400105>.
 
    [K03]      Kelly, T., "Scalable TCP: improving performance in
               highspeed wide area networks", ACM SIGCOMM Computer
@@ -994,23 +989,25 @@ Appendix B.  Changes from RFC8312
 
 B.1.  Since RFC8312
 
-   *  converted to markdown and xml2rfc v3 *
+   *  converted to markdown and xml2rfc v3
+
+   *  updated references (as part of the conversion)
+
+   *  various whitespace changes
 
 Authors' Addresses
 
-   Lars Eggert
+   Lars Eggert (editor)
    NetApp
 
    Email: lars@netapp.com
+   URI:   https://eggert.org/
 
 
 
 Eggert, et al.             Expires 14 May 2021                 [Page 18]
 
 Internet-Draft                    CUBIC                    November 2020
-
-
-   URI:   https://eggert.org/
 
 
    Richard Scheffenegger
@@ -1023,6 +1020,9 @@ Internet-Draft                    CUBIC                    November 2020
    University of Nebraska-Lincoln
 
    Email: xu@unl.edu
+
+
+
 
 
 
