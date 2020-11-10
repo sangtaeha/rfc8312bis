@@ -20,6 +20,7 @@ author:
   org: NetApp
   email: lars@netapp.com
   uri: "https://eggert.org/"
+  role: editor
 -
   name: Richard Scheffenegger
   org: NetApp
@@ -317,9 +318,8 @@ reduced in the last congestion event.
 CUBIC uses the following window increase function:
 
 ~~~
-    W_cubic(t) = C * (t - K)^3 + W_max
+    W_cubic(t) = C * (t - K)^3 + W_max                (Eq. 1)
 ~~~
-{: #eq1}
 
 where C is a constant fixed to determine the aggressiveness of window
 increase in high BDP networks, t is the elapsed time from the
@@ -329,9 +329,8 @@ size to W_max if there are no further congestion events and is
 calculated using the following equation:
 
 ~~~
-    K = cubic_root(W_max * (1 - beta_cubic) / C)
+    K = cubic_root(W_max * (1 - beta_cubic) / C)      (Eq. 2)
 ~~~
-{: #eq2}
 
 where beta_cubic is the CUBIC multiplication decrease factor, that
 is, when a congestion event is detected, CUBIC reduces its cwnd to
@@ -339,7 +338,7 @@ W_cubic(0)=W_max*beta_cubic. We discuss how we set beta_cubic in
 {{mult-dec}} and how we set C in {{discussion}}.
 
 Upon receiving an ACK during congestion avoidance, CUBIC computes the
-window increase rate during the next RTT period using {{eq1}}. It sets
+window increase rate during the next RTT period using Eq. 1. It sets
 W_cubic(t+RTT) as the candidate target value of the congestion
 window, where RTT is the weighted average RTT calculated by Standard
 TCP.
@@ -371,18 +370,17 @@ Additive Increase and Multiplicative Decrease (AIMD) algorithm with
 an additive factor of alpha_aimd (segments per RTT) and a
 multiplicative factor of beta_aimd, denoted by AIMD(alpha_aimd,
 beta_aimd). Specifically, the average congestion window size of
-AIMD(alpha_aimd, beta_aimd) can be calculated using {{eq3}}. The
+AIMD(alpha_aimd, beta_aimd) can be calculated using Eq. 3. The
 analysis shows that AIMD(alpha_aimd, beta_aimd) with
 alpha_aimd=3*(1-beta_aimd)/(1+beta_aimd) achieves the same average
 window size as Standard TCP that uses AIMD(1, 0.5).
 
 ~~~
     AVG_W_aimd = [alpha_aimd * (1 + beta_aimd) /
-                  (2 * (1 - beta_aimd) * p)]^0.5
+                  (2 * (1 - beta_aimd) * p)]^0.5      (Eq. 3)
 ~~~
-{: #eq3}
 
-Based on the above analysis, CUBIC uses {{eq4}} to estimate the window
+Based on the above analysis, CUBIC uses Eq. 4 to estimate the window
 size W_est of AIMD(alpha_aimd, beta_aimd) with
 alpha_aimd=3*(1-beta_cubic)/(1+beta_cubic) and beta_aimd=beta_cubic,
 which achieves the same average window size as Standard TCP. When
@@ -393,9 +391,9 @@ be set to W_est(t) at each reception of an ACK.
 
 ~~~
     W_est(t) = W_max * beta_cubic +
-               [3 * (1 - beta_cubic) / (1 + beta_cubic)] * (t / RTT)
+               [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
+               (t / RTT)                              (Eq. 4)
 ~~~
-{: #eq4}
 
 ## Concave Region
 
@@ -403,7 +401,7 @@ When receiving an ACK in congestion avoidance, if CUBIC is not in the
 TCP-friendly region and cwnd is less than W_max, then CUBIC is in the
 concave region. In this region, cwnd MUST be incremented by
 (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-W_cubic(t+RTT) is calculated using {{eq1}}.
+W_cubic(t+RTT) is calculated using Eq. 1.
 
 ## Convex Region
 
@@ -421,7 +419,7 @@ beginning and gradually increases its increase rate. We also call
 this region the "maximum probing phase" since CUBIC is searching for
 a new W_max. In this region, cwnd MUST be incremented by
 (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-W_cubic(t+RTT) is calculated using {{eq1}}.
+W_cubic(t+RTT) is calculated using Eq. 1.
 
 ## Multiplicative Decrease {#mult-dec}
 
@@ -492,7 +490,7 @@ In case of timeout, CUBIC follows Standard TCP to reduce cwnd
 {{mult-dec}}) that is different from Standard TCP {{!RFC5681}}.
 
 During the first congestion avoidance after a timeout, CUBIC
-increases its congestion window size using {{eq1}}, where t is the
+increases its congestion window size using Eq. 1, where t is the
 elapsed time since the beginning of the current congestion avoidance,
 K is set to 0, and W_max is set to the congestion window size at the
 beginning of the current congestion avoidance.
@@ -508,7 +506,7 @@ distance networks.
 In the case when CUBIC runs the hybrid slow start {{HR08}}, it may exit
 the first slow start without incurring any packet loss and thus W_max
 is undefined. In this special case, CUBIC switches to congestion
-avoidance and increases its congestion window size using {{eq1}}, where
+avoidance and increases its congestion window size using Eq. 1, where
 t is the elapsed time since the beginning of the current congestion
 avoidance, K is set to 0, and W_max is set to the congestion window
 size at the beginning of the current congestion avoidance.
@@ -527,19 +525,18 @@ be obtained by the following function:
 ~~~
     AVG_W_cubic = [C * (3 + beta_cubic) /
                    (4 * (1 - beta_cubic))]^0.25 *
-                  (RTT^0.75) / (p^0.75)
+                  (RTT^0.75) / (p^0.75)               (Eq. 5)
 ~~~
-{: #eq5}
 
 With beta_cubic set to 0.7, the above formula is reduced to:
 
 ~~~
-    AVG_W_cubic = (C * 3.7 / 1.2)^0.25 * (RTT^0.75) / (p^0.75)
+    AVG_W_cubic = (C * 3.7 / 1.2)^0.25 *
+                  (RTT^0.75) / (p^0.75)               (Eq. 6)
 ~~~
-{: #eq6}
 
 We will determine the value of C in the following subsection using
-{{eq6}}.
+Eq. 6.
 
 ## Fairness to Standard TCP
 
@@ -557,7 +554,7 @@ CUBIC is designed to behave very similarly to Standard TCP in the
 above two types of networks. The following two tables show the
 average window sizes of Standard TCP, HSTCP, and CUBIC. The average
 window sizes of Standard TCP and HSTCP are from {{?RFC3649}}. The
-average window size of CUBIC is calculated using {{eq6}} and the CUBIC
+average window size of CUBIC is calculated using Eq. 6 and the CUBIC
 TCP-friendly region for three different values of C.
 
 ~~~
@@ -576,9 +573,8 @@ TCP-friendly region for three different values of C.
 
                                Table 1
 ~~~
-{: #tab1}
 
-{{tab1}} describes the response function of Standard TCP, HSTCP, and
+Table 1 describes the response function of Standard TCP, HSTCP, and
 CUBIC in networks with RTT = 0.1 seconds. The average window size is
 in MSS-sized segments.
 
@@ -598,9 +594,8 @@ in MSS-sized segments.
 
                                Table 2
 ~~~
-{: #tab2}
 
-{{tab2}} describes the response function of Standard TCP, HSTCP, and
+Table 2 describes the response function of Standard TCP, HSTCP, and
 CUBIC in networks with RTT = 0.01 seconds. The average window size
 is in MSS-sized segments.
 
@@ -621,14 +616,13 @@ CUBIC with a low C cannot efficiently use the bandwidth in long RTT
 and high-bandwidth networks. Based on these observations and our
 experiments, we find C=0.4 gives a good balance between TCP-
 friendliness and aggressiveness of window increase. Therefore, C
-SHOULD be set to 0.4. With C set to 0.4, {{eq6}} is reduced to:
+SHOULD be set to 0.4. With C set to 0.4, Eq. 6 is reduced to:
 
 ~~~
-    AVG_W_cubic = 1.054 * (RTT^0.75) / (p^0.75)
+    AVG_W_cubic = 1.054 * (RTT^0.75) / (p^0.75)       (Eq. 7)
 ~~~
-{: #eq7}
 
-{{eq7}} is then used in the next subsection to show the scalability of
+Eq. 7 is then used in the next subsection to show the scalability of
 CUBIC.
 
 ## Using Spare Capacity
@@ -653,7 +647,6 @@ packet loss rate of 2.9e-8.
 
                                Table 3
 ~~~
-{: #tab3}
 
 Table 3 describes the required packet loss rate for Standard TCP,
 HSTCP, and CUBIC to achieve a certain throughput. We use 1500-byte
@@ -708,7 +701,7 @@ This is not considered in the current CUBIC.
 CUBIC does not raise its congestion window size if the flow is
 currently limited by the application instead of the congestion
 window. In case of long periods when cwnd has not been updated due
-to the application rate limit, such as idle periods, t in {{eq1}} MUST
+to the application rate limit, such as idle periods, t in Eq. 1 MUST
 NOT include these periods; otherwise, W_cubic(t) might be very high
 after restarting from these periods.
 
@@ -743,8 +736,9 @@ This document does not require any IANA actions.
 
 ## Since RFC8312
 
-* converted to markdown and xml2rfc v3
-*
+- converted to markdown and xml2rfc v3
+- updated references (as part of the conversion)
+- various whitespace changes
 
 <!-- Authors' Addresses
 
