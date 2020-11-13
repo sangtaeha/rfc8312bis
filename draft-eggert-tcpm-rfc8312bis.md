@@ -16,20 +16,37 @@ pi: [toc, sortrefs, symrefs, docmapping]
 author:
 
 -
+  name: Lisong Xu
+  org: University of Nebraska-Lincoln
+  abbrev: UNL
+  street: Department of Computer Science and Engineering
+  city: Lincoln
+  region: NE
+  code: 68588-0115
+  country: USA
+  email: xu@unl.edu
+  uri: "https://cse.unl.edu/~xu/"
+-
+  name: Sangtae Ha
+  org: University of Colorado at Boulder
+  abbrev: Colorado
+  street: Department of Computer Science
+  city: Boulder
+  region: CO
+  code: 80309-0430
+  country: USA
+  email: sangtae.ha@colorado.edu
+  uri: "https://netstech.org/sangtaeha/"
+-
   name: Lars Eggert
   org: NetApp
-  email: lars@netapp.com
+  street: Stenbergintie 12 B
+  city: Kauniainen
+  code: "02700"
+  country: FI
+  email: lars@eggert.org
   uri: "https://eggert.org/"
   role: editor
--
-  name: Richard Scheffenegger
-  org: NetApp
-  email: rs.ietf@gmx.at
-
--
- name: Lisong Xu
- org: University of Nebraska-Lincoln
- email: xu@unl.edu
 
 informative:
   FHP00:
@@ -110,8 +127,8 @@ CUBIC to conform to the current Linux version.
 
 --- note_Note_to_Readers
 
-Discussion of this draft takes place on the TCPM working group mailing list
-([tcpm@ietf.org](mailto:tcpm@ietf.org)), which is archived at
+Discussion of this draft takes place on the [TCPM working group mailing
+list](mailto:tcpm@ietf.org), which is archived at
 [](https://mailarchive.ietf.org/arch/browse/tcpm/).
 
 Working Group information can be found at
@@ -129,9 +146,9 @@ in a network with a large bandwidth-delay product (BDP). {{HKLRX06}}
 indicates that this problem is frequently observed even in the range
 of congestion window sizes over several hundreds of packets. This
 problem is equally applicable to all Reno-style TCP standards and
-their variants, including TCP-RENO {{!RFC5681}}, TCP-NewReno {{!RFC6582}}
-{{!RFC6675}}, SCTP {{!RFC4960}}, and TFRC {{!RFC5348}}, which use the same
-linear increase function for window growth, which we refer to
+their variants, including TCP-Reno {{!RFC5681}}, TCP-NewReno
+{{!RFC6582}}{{!RFC6675}}, SCTP {{?RFC4960}}, and TFRC {{!RFC5348}}, which
+use the same linear increase function for window growth, which we refer to
 collectively as "Standard TCP" below.
 
 CUBIC, originally proposed in {{?HRX08}}, is a modification to the
@@ -167,74 +184,62 @@ guidelines specified in {{!RFC5033}}.
 
 CUBIC is designed according to the following design principles:
 
-1. For better network utilization and stability, CUBIC
-   uses both the concave and convex profiles of a cubic function to
-   increase the congestion window size, instead of using just a
-   convex function.
+Principle 1:
+: For better network utilization and stability, CUBIC
+uses both the concave and convex profiles of a cubic function to
+increase the congestion window size, instead of using just a
+convex function.
 
-2. To be TCP-friendly, CUBIC is designed to behave like
-   Standard TCP in networks with short RTTs and small bandwidth where
-   Standard TCP performs well.
+Principle 2:
+: To be TCP-friendly, CUBIC is designed to behave like
+Standard TCP in networks with short RTTs and small bandwidth where
+Standard TCP performs well.
 
-3. For RTT-fairness, CUBIC is designed to achieve linear
-   bandwidth sharing among flows with different RTTs.
+Principle 3:
+: For RTT-fairness, CUBIC is designed to achieve linear
+bandwidth sharing among flows with different RTTs.
 
-4. CUBIC appropriately sets its multiplicative window
-   decrease factor in order to balance between the scalability and
-   convergence speed.
+Principle 4:
+: CUBIC appropriately sets its multiplicative window
+decrease factor in order to balance between the scalability and
+convergence speed.
 
-The following subsections discuss these four principles in more detail.
-
-## Principle 1
-
-For better network utilization and stability, CUBIC
+Principle 1: For better network utilization and stability, CUBIC
 {{?HRX08}} uses a cubic window increase function in terms of the elapsed
 time from the last congestion event. While most alternative
 congestion control algorithms to Standard TCP increase the congestion
 window using convex functions, CUBIC uses both the concave and convex
-profiles of a cubic function for window growth.
-
-After a window
+profiles of a cubic function for window growth. After a window
 reduction in response to a congestion event is detected by duplicate
 ACKs or Explicit Congestion Notification-Echo (ECN-Echo) ACKs
 {{!RFC3168}}, CUBIC registers the congestion window size where it got
 the congestion event as W_max and performs a multiplicative decrease
-of congestion window.
-
-After it enters into congestion avoidance, it
+of congestion window. After it enters into congestion avoidance, it
 starts to increase the congestion window using the concave profile of
 the cubic function. The cubic function is set to have its plateau at
 W_max so that the concave window increase continues until the window
 size becomes W_max. After that, the cubic function turns into a
-convex profile and the convex window increase begins.
-
-This style of
+convex profile and the convex window increase begins. This style of
 window adjustment (concave and then convex) improves the algorithm
 stability while maintaining high network utilization {{?CEHRX07}}. This
 is because the window size remains almost constant, forming a plateau
 around W_max where network utilization is deemed highest. Under
 steady state, most window size samples of CUBIC are close to W_max,
-thus promoting high network utilization and stability.
-
-Note that
+thus promoting high network utilization and stability. Note that
 those congestion control algorithms using only convex functions to
 increase the congestion window size have the maximum increments
 around W_max, and thus introduce a large number of packet bursts
 around the saturation point of the network, likely causing frequent
 global loss synchronizations.
 
-## Principle 2
-
-CUBIC promotes per-flow fairness to Standard TCP. Note
+Principle 2: CUBIC promotes per-flow fairness to Standard TCP. Note
 that Standard TCP performs well under short RTT and small bandwidth
 (or small BDP) networks. There is only a scalability problem in
 networks with long RTTs and large bandwidth (or large BDP). An
 alternative congestion control algorithm to Standard TCP designed to
 be friendly to Standard TCP on a per-flow basis must operate to
 increase its congestion window less aggressively in small BDP
-networks than in large BDP networks.
-
-The aggressiveness of CUBIC
+networks than in large BDP networks. The aggressiveness of CUBIC
 mainly depends on the maximum window size before a window reduction,
 which is smaller in small BDP networks than in large BDP networks.
 Thus, CUBIC increases its congestion window less aggressively in
@@ -246,24 +251,19 @@ throughput as Standard TCP in small BDP networks. We call this
 region where CUBIC behaves like Standard TCP, the "TCP-friendly
 region".
 
-## Principle 3
-
-Two CUBIC flows with different RTTs have their
+Principle 3: Two CUBIC flows with different RTTs have their
 throughput ratio linearly proportional to the inverse of their RTT
 ratio, where the throughput of a flow is approximately the size of
 its congestion window divided by its RTT. Specifically, CUBIC
 maintains a window increase rate independent of RTTs outside of the
 TCP-friendly region, and thus flows with different RTTs have similar
 congestion window sizes under steady state when they operate outside
-the TCP-friendly region.
-
-This notion of a linear throughput ratio is
+the TCP-friendly region. This notion of a linear throughput ratio is
 similar to that of Standard TCP under high statistical multiplexing
 environments where packet losses are independent of individual flow
 rates. However, under low statistical multiplexing environments, the
 throughput ratio of Standard TCP flows with different RTTs is
 quadratically proportional to the inverse of their RTT ratio {{XHR04}}.
-
 CUBIC always ensures the linear throughput ratio independent of the
 levels of statistical multiplexing. This is an improvement over
 Standard TCP. While there is no consensus on particular throughput
@@ -274,13 +274,9 @@ or a higher-order throughput ratio (e.g., a quadratical throughput
 ratio of Standard TCP under low statistical multiplexing
 environments).
 
-## Principle 4
-
-To balance between the scalability and convergence
+Principle 4: To balance between the scalability and convergence
 speed, CUBIC sets the multiplicative window decrease factor to 0.7
-while Standard TCP uses 0.5.
-
-While this improves the scalability of
+while Standard TCP uses 0.5. While this improves the scalability of
 CUBIC, a side effect of this decision is slower convergence,
 especially under low statistical multiplexing environments. This
 design choice is following the observation that the author of
@@ -288,9 +284,7 @@ HighSpeed TCP (HSTCP) {{?RFC3649}} has made along with other researchers
 (e.g., {{GV02}}): the current Internet becomes more asynchronous with
 less frequent loss synchronizations with high statistical
 multiplexing. Under this environment, even strict Multiplicative-Increase
-Multiplicative-Decrease (MIMD) can converge.
-
-CUBIC flows
+Multiplicative-Decrease (MIMD) can converge. CUBIC flows
 with the same RTT always converge to the same throughput independent
 of statistical multiplexing, thus achieving intra-algorithm fairness.
 We also find that under the environments with sufficient statistical
@@ -308,7 +302,7 @@ denote the slow-start threshold.
 CUBIC maintains the acknowledgment (ACK) clocking of Standard TCP by
 increasing the congestion window only at the reception of an ACK. It
 does not make any change to the fast recovery and retransmit of TCP,
-such as TCP-NewReno {{!RFC6582}} {{!RFC6675}}. During congestion avoidance
+such as TCP-NewReno {{!RFC6582}}{{!RFC6675}}. During congestion avoidance
 after a congestion event where a packet loss is detected by duplicate
 ACKs or a network congestion is detected by ACKs with ECN-Echo flags
 {{!RFC3168}}, CUBIC changes the window increase function of Standard
@@ -457,15 +451,11 @@ value of W_max before it updates W_max for the current congestion
 event. Let us call the last value of W_max to be W_last_max.
 
 ~~~
-    // should we make room for others
-    if (W_max < W_last_max) {
-        // remember the last W_max
-        W_last_max = W_max
-        // further reduce W_max
-        W_max = W_max * (1.0 + beta_cubic) / 2.0
+    if (W_max < W_last_max) {       // should we make room for others
+        W_last_max = W_max                // remember the last W_max
+        W_max = W_max * (1.0 + beta_cubic) / 2.0  // further reduce
     } else {
-        // remember the last W_max
-        W_last_max = W_max
+        W_last_max = W_max                // remember the last W_max
     }
 ~~~
 
@@ -531,8 +521,8 @@ be obtained by the following function:
 With beta_cubic set to 0.7, the above formula is reduced to:
 
 ~~~
-    AVG_W_cubic = (C * 3.7 / 1.2)^0.25 *
-                  (RTT^0.75) / (p^0.75)               (Eq. 6)
+    AVG_W_cubic = (C * 3.7 / 1.2)^0.25 * (RTT^0.75) / (p^0.75)
+                                                      (Eq. 6)
 ~~~
 
 We will determine the value of C in the following subsection using
@@ -730,7 +720,7 @@ This document does not require any IANA actions.
 
 --- back
 
-# Acknowledgements
+<!-- # Acknowledgements -->
 
 # Changes from RFC8312
 
@@ -738,22 +728,5 @@ This document does not require any IANA actions.
 
 - converted to markdown and xml2rfc v3
 - updated references (as part of the conversion)
+- updated author information
 - various whitespace changes
-
-<!-- Authors' Addresses
-
-   Injong Rhee
-   North Carolina State University
-   Department of Computer Science
-   Raleigh, NC  27695-7534
-   United States of America
-   Email: rhee@ncsu.edu
-
-   Sangtae Ha
-   University of Colorado at Boulder
-   Department of Computer Science
-   Boulder, CO  80309-0430
-   United States of America
-   Email: sangtae.ha@colorado.edu
-
- -->
