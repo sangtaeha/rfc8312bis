@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-12T00:02:10.872691+00:00",
+  "timestamp": "2020-11-15T00:02:15.345235+00:00",
   "repo": "NTAP/rfc8312bis",
   "labels": [
     {
@@ -49,6 +49,82 @@
       "color": "ffffff"
     }
   ],
-  "issues": [],
-  "pulls": []
+  "issues": [
+    {
+      "number": 1,
+      "id": "MDU6SXNzdWU3NDI4NTEzNzA=",
+      "title": "Update K definition (Eq. 2) to account for Fast Convergence",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/1",
+      "state": "OPEN",
+      "author": "WesleyRosenblum",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "As discussed in [this tcpm thread](https://mailarchive.ietf.org/arch/msg/tcpm/O7Q55oXcoI1XNBZ_wAQOMdhRQNY/), after fast convergence (section 4.6), the candidate target value of the congestion window may be less than the current congestion window. For example, say cwnd = 100, beta_cubic = .7 and a congestion event occurs:\r\n\r\n```\r\nW_max = cwnd = 100;\r\nW_max = W_max*(1.0+beta_cubic)/2.0 = 85   // further reduce W_max for fast convergence\r\n\r\ncwnd = cwnd * beta_cubic = 70\t          // window reduction\r\nW_cubic(0) = W_max * beta_cubic = 59.5\r\n```\r\n\r\nIf we were to enter congestion avoidance at this point, with a small enough RTT, the candidate target congestion window as calculated by W_cubic(t+RTT) may be less than the current congestion window (~59.5 < 70). \r\n\r\nThe suggestion in the thread from Lisong Xu and Vidhi Goel is to change Equation 2 to:\r\n```\r\nK = cubic_root((W_max - cwnd)/C) (Eq. 2)\r\n```\r\nwhere cwnd is the congestion window size at the beginning of the current congestion avoidance. This will ensure the target is greater than the current congestion window, and in my opinion is a more clear representation of what K represents.",
+      "createdAt": "2020-11-13T23:36:02Z",
+      "updatedAt": "2020-11-14T22:14:57Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Yes, we can change Equation 2 in the RFC to the following equation where cwnd is the cwnd at the beginning of the current congestion avoidance stage. \r\n\r\n`\r\nK = cubic_root((W_max - cwnd)/C)  (Eq. 2)\r\n`\r\n\r\nTo be exactly consistent with the Linux Cubic implementation, we can change Equation 2 to the following statement, where cwnd is still the cwnd at the beginning of the current congestion avoidance stage. \r\n\r\n`\r\nif (cwnd < W_max)\r\n  K = cubic_root((W_max - cwnd)/C)  \r\nelse{\r\n  K = 0  \r\n  W_max = cwnd\r\n}\r\n\r\n`\r\n\r\nThank you!\r\n",
+          "createdAt": "2020-11-14T22:14:57Z",
+          "updatedAt": "2020-11-14T22:14:57Z"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "id": "MDU6SXNzdWU3NDI5MzYxODU=",
+      "title": "Congestion window TCP friendly region after W_max",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/2",
+      "state": "OPEN",
+      "author": "goelvidhi",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "The idea of using alpha_aimd as defined below is to ensure that the congestion window growth for Cubic is similar to standard TCP as Cubic's reduction factor (0.3) is smaller than that of standard TCP (0.5)\r\n\r\nCurrently, alpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic) // for the entire TCP friendly region\r\n\r\nBut we think that once the cwnd in TF region reaches W_max, we should set the alpha_aimd to 1 to have similar behavior as standard TCP congestion algorithm (eg. NewReno)\r\n\r\nif (W_est < W_max)\r\n\talpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic)\r\nelse\r\n\talpha_aimd = 1\r\n\r\nI'd be happy to work on a PR for this if folks think that this would be a good addition.",
+      "createdAt": "2020-11-14T06:01:03Z",
+      "updatedAt": "2020-11-14T22:29:47Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thank you, you are right that once cwnd reaches W_max, we should set alpha_aimd (or the delta variable in Linux) to 1 to make sure that CUBIC has at least the same throughput as the standard TCP. \r\n\r\nBut if the purpose of this RFC is to document the current Linux CUBIC implementation, then we do not need to change it. \r\n\r\nThanks,",
+          "createdAt": "2020-11-14T22:29:47Z",
+          "updatedAt": "2020-11-14T22:29:47Z"
+        }
+      ]
+    }
+  ],
+  "pulls": [
+    {
+      "number": 3,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTIwOTcwNTQ1",
+      "title": "redefine the K equation",
+      "url": "https://github.com/NTAP/rfc8312bis/pull/3",
+      "state": "OPEN",
+      "author": "goelvidhi",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "I have tried to address https://github.com/NTAP/rfc8312bis/issues/1. I have kept the Eq. 2 as is and added justification for further simplification / generalization to address the fast convergence issue with Eq. 2.\r\n\r\nI apologize in advance if I created this PR too soon (I thought this is a major issue as most Cubic implementation perform Fast Convergence).",
+      "createdAt": "2020-11-14T06:55:10Z",
+      "updatedAt": "2020-11-14T06:55:10Z",
+      "baseRepository": "NTAP/rfc8312bis",
+      "baseRefName": "main",
+      "baseRefOid": "9b32969104cefb2f773c4db0728599d1c851131a",
+      "headRepository": "goelvidhi/rfc8312bis",
+      "headRefName": "updated-K",
+      "headRefOid": "06d1ff7c4746e24014eca959867d5e2ddf1d19b4",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
+    }
+  ]
 }
