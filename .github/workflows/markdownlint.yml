@@ -4,7 +4,7 @@ on:
   pull_request:
     paths-ignore:
     - .*
-    - [A-Z].md
+    - "[A-Z].md"
     - Makefile
 
 jobs:
