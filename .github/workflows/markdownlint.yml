@@ -1,4 +1,4 @@
-name: "Update Editor's Copy"
+name: ":Lint markdown"
 
 on:
   push:
@@ -18,14 +18,14 @@ on:
 
 jobs:
   lint-changelog:
-    name: Lint I-D
+    name: Lint markdown
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Lint I-D file
+    - name: Lint markdown
       uses: docker://avtodev/markdown-lint:v1
       with:
-        # rules: '.markdownlint.json'
+        rules: '.markdownlint.json'
         args: 'draft-*.md'
