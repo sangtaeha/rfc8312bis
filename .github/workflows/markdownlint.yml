@@ -1,4 +1,4 @@
-name: ":Lint markdown"
+name: "Lint Markdown"
 
 on:
   push:
@@ -18,14 +18,17 @@ on:
 
 jobs:
   lint-changelog:
-    name: Lint markdown
+    name: Lint Markdown
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-
-    - name: Lint markdown
+    - name: Directory
+      run: |
+        pwd
+        ls -la
+    - name: Run markdownlint
       uses: docker://avtodev/markdown-lint:v1
       with:
         rules: '.markdownlint.json'
-        args: 'draft-*.md'
+        args: '*.md'
