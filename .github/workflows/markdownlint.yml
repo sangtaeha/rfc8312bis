@@ -28,5 +28,4 @@ jobs:
       uses: docker://avtodev/markdown-lint:v1
       with:
         # rules: '.markdownlint.json'
-        ignore: ['README.md', 'CONTRIBUTING.md', 'LICENSE.md']
-        args: '*.md'
+        args: 'draft-*.md'
