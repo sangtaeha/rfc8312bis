@@ -23,12 +23,8 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-    - name: Directory
-      run: |
-        pwd
-        ls -la
     - name: Run markdownlint
       uses: docker://avtodev/markdown-lint:v1
       with:
-        rules: '.markdownlint.json'
+        # rules: '.markdownlint.json'
         args: '*.md'
