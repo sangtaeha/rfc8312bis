@@ -23,6 +23,6 @@ jobs:
     - name: Lint I-D file
       uses: docker://avtodev/markdown-lint:v1
       with:
-        rules: '.markdownlint.json'
+        # rules: '.markdownlint.json'
         ignore: '[A-Z]*.md'
         args: '*.md'
