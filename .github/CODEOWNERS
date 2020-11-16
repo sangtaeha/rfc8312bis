@@ -1,0 +1,5 @@
+# larseggert is the default code owner for everything
+*		larseggert
+
+# except the draft markdown, which all the authors/editors own
+draft*.md	lisongxu, sangtaeha, larseggert
