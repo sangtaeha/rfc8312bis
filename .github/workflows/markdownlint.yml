@@ -4,12 +4,16 @@ on:
   push:
     paths-ignore:
     - .*
-    - "[A-Z].md"
+    - README.md
+    - LICENSE.md
+    - CONTRIBUTING.md
     - Makefile
   pull_request:
     paths-ignore:
     - .*
-    - "[A-Z].md"
+    - README.md
+    - LICENSE.md
+    - CONTRIBUTING.md
     - Makefile
 
 jobs:
@@ -24,5 +28,5 @@ jobs:
       uses: docker://avtodev/markdown-lint:v1
       with:
         # rules: '.markdownlint.json'
-        ignore: '[A-Z]*.md'
+        ignore: ['README.md', 'CONTRIBUTING.md', 'LICENSE.md']
         args: '*.md'
