@@ -1,6 +1,11 @@
 name: "Update Editor's Copy"
 
 on:
+  push:
+    paths-ignore:
+    - .*
+    - "[A-Z].md"
+    - Makefile
   pull_request:
     paths-ignore:
     - .*
