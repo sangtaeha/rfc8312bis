@@ -26,5 +26,5 @@ jobs:
     - name: Run markdownlint
       uses: docker://avtodev/markdown-lint:v1
       with:
-        rules: './.markdownlint.json'
+        config: './.markdownlint.json'
         args: 'draft-*.md'
