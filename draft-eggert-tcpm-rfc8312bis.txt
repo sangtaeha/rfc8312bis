@@ -386,7 +386,7 @@ Table of Contents
        W_max = cwnd                 // save window size before reduction
        ssthresh = cwnd * beta_cubic // new slow-start threshold
        ssthresh = max(ssthresh, 2)  // threshold is at least 2 MSS
-       cwnd = cwnd * beta_cubic     // window reduction
+       cwnd = ssthresh              // window reduction
 
    A side effect of setting beta_cubic to a value bigger than 0.5 is
    slower convergence.  We believe that while a more adaptive setting of
