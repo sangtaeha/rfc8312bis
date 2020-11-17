@@ -426,7 +426,7 @@ cwnd, and ssthresh as follows. Parameter beta_cubic SHOULD be set to
     W_max = cwnd                 // save window size before reduction
     ssthresh = cwnd * beta_cubic // new slow-start threshold
     ssthresh = max(ssthresh, 2)  // threshold is at least 2 MSS
-    cwnd = cwnd * beta_cubic     // window reduction
+    cwnd = ssthresh              // window reduction
 ~~~
 
 A side effect of setting beta_cubic to a value bigger than 0.5 is
