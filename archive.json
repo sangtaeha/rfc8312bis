@@ -1,16 +1,16 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-15T00:02:15.345235+00:00",
+  "timestamp": "2020-11-17T00:02:18.992407+00:00",
   "repo": "NTAP/rfc8312bis",
   "labels": [
     {
-      "name": "bug",
-      "description": "Something isn't working",
+      "name": "design",
+      "description": "Normative change relative to RFC8312",
       "color": "d73a4a"
     },
     {
-      "name": "documentation",
-      "description": "Improvements or additions to documentation",
+      "name": "editorial",
+      "description": "Editorial change relative to RFC9312",
       "color": "0075ca"
     },
     {
@@ -19,32 +19,12 @@
       "color": "cfd3d7"
     },
     {
-      "name": "enhancement",
-      "description": "New feature or request",
-      "color": "a2eeef"
-    },
-    {
-      "name": "good first issue",
-      "description": "Good for newcomers",
-      "color": "7057ff"
-    },
-    {
       "name": "help wanted",
       "description": "Extra attention is needed",
       "color": "008672"
     },
     {
       "name": "invalid",
-      "description": "This doesn't seem right",
-      "color": "e4e669"
-    },
-    {
-      "name": "question",
-      "description": "Further information is requested",
-      "color": "d876e3"
-    },
-    {
-      "name": "wontfix",
       "description": "This will not be worked on",
       "color": "ffffff"
     }
@@ -59,10 +39,12 @@
       "author": "WesleyRosenblum",
       "authorAssociation": "NONE",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "design"
+      ],
       "body": "As discussed in [this tcpm thread](https://mailarchive.ietf.org/arch/msg/tcpm/O7Q55oXcoI1XNBZ_wAQOMdhRQNY/), after fast convergence (section 4.6), the candidate target value of the congestion window may be less than the current congestion window. For example, say cwnd = 100, beta_cubic = .7 and a congestion event occurs:\r\n\r\n```\r\nW_max = cwnd = 100;\r\nW_max = W_max*(1.0+beta_cubic)/2.0 = 85   // further reduce W_max for fast convergence\r\n\r\ncwnd = cwnd * beta_cubic = 70\t          // window reduction\r\nW_cubic(0) = W_max * beta_cubic = 59.5\r\n```\r\n\r\nIf we were to enter congestion avoidance at this point, with a small enough RTT, the candidate target congestion window as calculated by W_cubic(t+RTT) may be less than the current congestion window (~59.5 < 70). \r\n\r\nThe suggestion in the thread from Lisong Xu and Vidhi Goel is to change Equation 2 to:\r\n```\r\nK = cubic_root((W_max - cwnd)/C) (Eq. 2)\r\n```\r\nwhere cwnd is the congestion window size at the beginning of the current congestion avoidance. This will ensure the target is greater than the current congestion window, and in my opinion is a more clear representation of what K represents.",
       "createdAt": "2020-11-13T23:36:02Z",
-      "updatedAt": "2020-11-14T22:14:57Z",
+      "updatedAt": "2020-11-16T09:29:58Z",
       "closedAt": null,
       "comments": [
         {
@@ -71,6 +53,20 @@
           "body": "Yes, we can change Equation 2 in the RFC to the following equation where cwnd is the cwnd at the beginning of the current congestion avoidance stage. \r\n\r\n`\r\nK = cubic_root((W_max - cwnd)/C)  (Eq. 2)\r\n`\r\n\r\nTo be exactly consistent with the Linux Cubic implementation, we can change Equation 2 to the following statement, where cwnd is still the cwnd at the beginning of the current congestion avoidance stage. \r\n\r\n`\r\nif (cwnd < W_max)\r\n  K = cubic_root((W_max - cwnd)/C)  \r\nelse{\r\n  K = 0  \r\n  W_max = cwnd\r\n}\r\n\r\n`\r\n\r\nThank you!\r\n",
           "createdAt": "2020-11-14T22:14:57Z",
           "updatedAt": "2020-11-14T22:14:57Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "@lisongxu thanks for confirming that Linux is doing something very similar! We should poll other implementors to see if they are already doing this, or would start to if we were to make this change.\n\n@goelvidhi could you update the PR accordingly?",
+          "createdAt": "2020-11-15T08:24:09Z",
+          "updatedAt": "2020-11-15T08:24:09Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "NONE",
+          "body": "@lisongxu, in the below equation, setting W_max = cwnd seems superfluous. Also, next time we want to compute K, it will enter the first condition and end up with K = 0.\r\n```\r\nif (cwnd < W_max)\r\nK = cubic_root((W_max - cwnd)/C)\r\nelse{\r\nK = 0\r\nW_max = cwnd\r\n}",
+          "createdAt": "2020-11-16T07:12:36Z",
+          "updatedAt": "2020-11-16T07:12:52Z"
         }
       ]
     },
@@ -83,20 +79,113 @@
       "author": "goelvidhi",
       "authorAssociation": "NONE",
       "assignees": [],
-      "labels": [],
+      "labels": [
+        "design"
+      ],
       "body": "The idea of using alpha_aimd as defined below is to ensure that the congestion window growth for Cubic is similar to standard TCP as Cubic's reduction factor (0.3) is smaller than that of standard TCP (0.5)\r\n\r\nCurrently, alpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic) // for the entire TCP friendly region\r\n\r\nBut we think that once the cwnd in TF region reaches W_max, we should set the alpha_aimd to 1 to have similar behavior as standard TCP congestion algorithm (eg. NewReno)\r\n\r\nif (W_est < W_max)\r\n\talpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic)\r\nelse\r\n\talpha_aimd = 1\r\n\r\nI'd be happy to work on a PR for this if folks think that this would be a good addition.",
       "createdAt": "2020-11-14T06:01:03Z",
-      "updatedAt": "2020-11-14T22:29:47Z",
+      "updatedAt": "2020-11-16T09:29:45Z",
       "closedAt": null,
       "comments": [
         {
           "author": "lisongxu",
           "authorAssociation": "COLLABORATOR",
-          "body": "Thank you, you are right that once cwnd reaches W_max, we should set alpha_aimd (or the delta variable in Linux) to 1 to make sure that CUBIC has at least the same throughput as the standard TCP. \r\n\r\nBut if the purpose of this RFC is to document the current Linux CUBIC implementation, then we do not need to change it. \r\n\r\nThanks,",
+          "body": "Thank you, you are right that once cwnd reaches W_max, we should set alpha_aimd (or the delta variable in Linux) to 1 to make sure that CUBIC has at least the same throughput as the standard TCP. \r\n\r\nBut if the purpose of this RFC is to document the current Linux CUBIC implementation, then we do not need to change it. ",
           "createdAt": "2020-11-14T22:29:47Z",
-          "updatedAt": "2020-11-14T22:29:47Z"
+          "updatedAt": "2020-11-16T07:24:18Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "@lisongxu Is this a change that should be committed to Linux?\n\nWe should also poll other implementations if they are doing something similar to what is proposed already, or would start doing so if we made the change.",
+          "createdAt": "2020-11-15T08:25:37Z",
+          "updatedAt": "2020-11-15T08:25:37Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "NONE",
+          "body": "Correct me if I am wrong, but I think the purpose of an RFC should be to document what would be the right behavior for the algorithm instead of what a particular implementation is doing. Having said that, as Linux is widely used OS, I think it would be good to commit this to Linux if we agree that this is a required change.\r\n\r\n@larseggert what is the best way to start a poll for other implementations? A slack channel?\r\n\r\n",
+          "createdAt": "2020-11-16T07:17:44Z",
+          "updatedAt": "2020-11-16T07:17:54Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "@goelvidhi RFC8312 was specifically written because there was no accurate CUBIC specification at the time other than the Linux source code (the paper algorithm was outdated.) I think we should try and stick to this for the revision, i.e., document the CUBIC variant that is used in production now, in Linux and other stacks.\r\n\r\nThat said, *if* there are modifications that we want to propose that would further improve CUBIC beyond what current implementations are doing, that is possible. But I'd like to then see if Linux and other stacks would be open to implementing these improvements -- I wouldn't want to end up with a CUBIC spec that is (again) divergent from what the main stacks do (in some aspects).\r\n\r\nAs for how to ask, I think an email to the TCPM WG mailing list with a pointer to the respective GitHub issue/PR works best.",
+          "createdAt": "2020-11-16T07:24:03Z",
+          "updatedAt": "2020-11-16T07:24:03Z"
         }
       ]
+    },
+    {
+      "number": 4,
+      "id": "MDU6SXNzdWU3NDM2NzEyMjU=",
+      "title": "Code to re-generate tables",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/4",
+      "state": "OPEN",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [
+        "editorial",
+        "help wanted"
+      ],
+      "body": "Does anyone have code to (re-)generate Tables 1, 2 and 3 for when we make changes to the math?",
+      "createdAt": "2020-11-16T09:26:30Z",
+      "updatedAt": "2020-11-16T10:54:34Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 5,
+      "id": "MDU6SXNzdWU3NDM3MzU3ODc=",
+      "title": "List of variables and constants",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/5",
+      "state": "OPEN",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [
+        "editorial",
+        "help wanted"
+      ],
+      "body": "It would be useful to add a consolidated list of all constants and variables with their units and a brief description.",
+      "createdAt": "2020-11-16T10:54:14Z",
+      "updatedAt": "2020-11-16T10:54:20Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 6,
+      "id": "MDU6SXNzdWU3NDM3NDA5ODE=",
+      "title": "Units are missing or unclear",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/6",
+      "state": "OPEN",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "@martinthomson raised this on the QUIC slack:\r\n> What are the units of C?  What are the units of t? (edited) \r\nI'm assuming that the units of W_cubic(t) and W_max are bytes (or multiples of MSS, I guess).  But what about W_est(t)?\r\nW_est(t) = W_max*0.7 + 1.1 * t / RTT\r\n(Numbers approximated.)  That's a component in bytes, and a unit-less component. ",
+      "createdAt": "2020-11-16T11:01:44Z",
+      "updatedAt": "2020-11-16T11:01:44Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 7,
+      "id": "MDU6SXNzdWU3NDM3NDIyNDU=",
+      "title": "cwnd can now be less than 2",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/7",
+      "state": "OPEN",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "@martinthomson raised this on the QUIC slack:\r\n```\r\n      W_max = cwnd;                 // save window size before reduction\r\n      ssthresh = cwnd * beta_cubic; // new slow-start threshold\r\n      ssthresh = max(ssthresh, 2);  // threshold is at least 2 MSS\r\n      cwnd = cwnd * beta_cubic;     // window reduction\r\n```\r\n>cwnd can now be less than 2.",
+      "createdAt": "2020-11-16T11:03:25Z",
+      "updatedAt": "2020-11-16T11:03:25Z",
+      "closedAt": null,
+      "comments": []
     }
   ],
   "pulls": [
@@ -112,13 +201,66 @@
       "labels": [],
       "body": "I have tried to address https://github.com/NTAP/rfc8312bis/issues/1. I have kept the Eq. 2 as is and added justification for further simplification / generalization to address the fast convergence issue with Eq. 2.\r\n\r\nI apologize in advance if I created this PR too soon (I thought this is a major issue as most Cubic implementation perform Fast Convergence).",
       "createdAt": "2020-11-14T06:55:10Z",
-      "updatedAt": "2020-11-14T06:55:10Z",
+      "updatedAt": "2020-11-16T10:58:27Z",
       "baseRepository": "NTAP/rfc8312bis",
       "baseRefName": "main",
       "baseRefOid": "9b32969104cefb2f773c4db0728599d1c851131a",
       "headRepository": "goelvidhi/rfc8312bis",
       "headRefName": "updated-K",
       "headRefOid": "06d1ff7c4746e24014eca959867d5e2ddf1d19b4",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTMxMjEzOTMy",
+          "commit": {
+            "abbreviatedOid": "06d1ff7"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "CHANGES_REQUESTED",
+          "body": "",
+          "createdAt": "2020-11-16T10:56:32Z",
+          "updatedAt": "2020-11-16T10:58:27Z",
+          "comments": [
+            {
+              "originalPosition": 4,
+              "body": "Please add an anchor for this section and use it in this reference, instead of hardcoding the value. (Check how `mult-dec` is used in the current text for an example.)",
+              "createdAt": "2020-11-16T10:56:32Z",
+              "updatedAt": "2020-11-16T10:58:27Z"
+            },
+            {
+              "originalPosition": 11,
+              "body": "I think it would be clearer if Eq. 2 were modified to include a conditional, rather than defining a separate equation for this case. That way, we also wouldn't need to renumber all the following equations.",
+              "createdAt": "2020-11-16T10:57:57Z",
+              "updatedAt": "2020-11-16T10:58:27Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTIxNzMyMjA0",
+      "title": "Enable markdownlint",
+      "url": "https://github.com/NTAP/rfc8312bis/pull/8",
+      "state": "OPEN",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2020-11-16T15:19:23Z",
+      "updatedAt": "2020-11-16T15:19:23Z",
+      "baseRepository": "NTAP/rfc8312bis",
+      "baseRefName": "main",
+      "baseRefOid": "89d9cda9fd5cb9ded734d4b380a5e933b00f0607",
+      "headRepository": "NTAP/rfc8312bis",
+      "headRefName": "markdownlint",
+      "headRefOid": "228e4d01342cefbd26f6c276bf7da1e8cd514d2c",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
