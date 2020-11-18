@@ -9,3 +9,9 @@ else
 	git clone -q --depth 10 $(CLONE_ARGS) \
 	    -b main https://github.com/martinthomson/i-d-template $(LIBDIR)
 endif
+
+CFLAGS=-Wall -Wextra -Weverything
+tablecode: tablecode.c
+
+clean::
+	rm tablecode 2> /dev/null || true
