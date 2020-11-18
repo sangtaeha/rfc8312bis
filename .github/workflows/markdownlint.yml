@@ -1,14 +1,7 @@
 name: "Lint Markdown"
 
 on:
-  push:
-    paths-ignore:
-    - .*
-    - README.md
-    - LICENSE.md
-    - CONTRIBUTING.md
-    - Makefile
-  pull_request:
+  [push, pull_request]:
     paths-ignore:
     - .*
     - README.md
