@@ -102,8 +102,9 @@ Table of Contents
    8.  References
      8.1.  Normative References
      8.2.  Informative References
-   Appendix A.  Changes from RFC8312
-     A.1.  Since RFC8312
+   Appendix A.  Acknowledgements
+   Appendix B.  Changes from RFC8312
+     B.1.  Since RFC8312
    Authors' Addresses
 
 1.  Introduction
@@ -780,9 +781,14 @@ Table of Contents
               IEEE INFOCOM 2004, DOI 10.1109/infcom.2004.1354672, March
               2004, <https://doi.org/10.1109/infcom.2004.1354672>.
 
-Appendix A.  Changes from RFC8312
+Appendix A.  Acknowledgements
 
-A.1.  Since RFC8312
+   Richard Scheffenegger and Alexander Zimmermann originally co-authored
+   [RFC8312].
+
+Appendix B.  Changes from RFC8312
+
+B.1.  Since RFC8312
 
    *  converted to markdown and xml2rfc v3
 
