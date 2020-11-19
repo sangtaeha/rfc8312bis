@@ -77,14 +77,17 @@ Table of Contents
    2.  Conventions
    3.  Design Principles of CUBIC
    4.  CUBIC Congestion Control
-     4.1.  Window Increase Function
-     4.2.  TCP-Friendly Region
-     4.3.  Concave Region
-     4.4.  Convex Region
-     4.5.  Multiplicative Decrease
-     4.6.  Fast Convergence
-     4.7.  Timeout
-     4.8.  Slow Start
+     4.1.  Definitions
+       4.1.1.  Constants of interest
+       4.1.2.  Variables of interest
+     4.2.  Window Increase Function
+     4.3.  TCP-Friendly Region
+     4.4.  Concave Region
+     4.5.  Convex Region
+     4.6.  Multiplicative Decrease
+     4.7.  Fast Convergence
+     4.8.  Timeout
+     4.9.  Slow Start
    5.  Discussion
      5.1.  Fairness to Standard TCP
      5.2.  Using Spare Capacity
@@ -263,12 +266,54 @@ Table of Contents
 
 4.  CUBIC Congestion Control
 
+   In this section, we discuss how the congestion window is updated
+   during the different stages of the CUBIC congestion controller.
+
+4.1.  Definitions
+
    The unit of all window sizes in this document is segments of the
    maximum segment size (MSS), and the unit of all times is seconds.
-   Let cwnd denote the congestion window size of a flow, and ssthresh
-   denote the slow-start threshold.
 
-4.1.  Window Increase Function
+4.1.1.  Constants of interest
+
+   beta_cubic:  CUBIC multiplication decrease factor as described in
+      Section 4.6 C:
+
+      constant that determines the aggressiveness of CUBIC in competing
+      with other congestion control algorithms in high BDP networks.
+      Please see Section 5 for more explanation on how it is set.  The
+      unit for C is segment / (second)^3
+
+4.1.2.  Variables of interest
+
+   Variables required to implement CUBIC are described in this section.
+
+   RTT:  smoothed round-trip time in seconds calculated as described in
+      [RFC6298] cwnd:
+
+      Current congestion window in segments. ssthresh:
+
+      Current slow start threshold in segments.  W_max:
+
+      Size of the cwnd in segments just before the cwnd is reduced in
+      the last congestion event.  W_last_max:
+
+      last value of W_max in segments before W_max is updated for the
+      current congestion event.  K:
+
+      the time period in seconds it takes to increase the current
+      congestion window size to W_max W_cubic(t):
+
+      Target value of the congestion window in segments at time t in
+      seconds based on the cubic increase function as described in
+      Section 4.2 W_est(t):
+
+      an estimate for the congestion window in segments at time t in
+      seconds in the TCP-friendly region, that is, an estimate for the
+      congestion window if the TCP-NewReno congestion controller was
+      used.
+
+4.2.  Window Increase Function
 
    CUBIC maintains the acknowledgment (ACK) clocking of Standard TCP by
    increasing the congestion window only at the reception of an ACK.  It
@@ -277,32 +322,29 @@ Table of Contents
    after a congestion event where a packet loss is detected by duplicate
    ACKs or a network congestion is detected by ACKs with ECN-Echo flags
    [RFC3168], CUBIC changes the window increase function of Standard
-   TCP.  Suppose that W_max is the window size just before the window is
-   reduced in the last congestion event.
+   TCP.
 
    CUBIC uses the following window increase function:
 
        W_cubic(t) = C * (t - K)^3 + W_max                (Eq. 1)
 
-   where C is a constant fixed to determine the aggressiveness of window
-   increase in high BDP networks, t is the elapsed time from the
-   beginning of the current congestion avoidance, and K is the time
-   period that the above function takes to increase the current window
-   size to W_max if there are no further congestion events and is
-   calculated using the following equation:
+   where t is the elapsed time in seconds from the beginning of the
+   current congestion avoidance, and K is the time period that the above
+   function takes to increase the current window size to W_max if there
+   are no further congestion events and is calculated using the
+   following equation:
 
        K = cubic_root(W_max * (1 - beta_cubic) / C)      (Eq. 2)
 
    where beta_cubic is the CUBIC multiplication decrease factor, that
    is, when a congestion event is detected, CUBIC reduces its cwnd to
    W_cubic(0)=W_max*beta_cubic.  We discuss how we set beta_cubic in
-   Section 4.5 and how we set C in Section 5.
+   Section 4.6 and how we set C in Section 5.
 
    Upon receiving an ACK during congestion avoidance, CUBIC computes the
    window increase rate during the next RTT period using Eq. 1.  It sets
    W_cubic(t+RTT) as the candidate target value of the congestion
-   window, where RTT is the weighted average RTT calculated by Standard
-   TCP.
+   window.
 
    Depending on the value of the current congestion window size cwnd,
    CUBIC runs in three different modes.
@@ -318,7 +360,7 @@ Table of Contents
 
    Below, we describe the exact actions taken by CUBIC in each region.
 
-4.2.  TCP-Friendly Region
+4.3.  TCP-Friendly Region
 
    Standard TCP performs well in certain types of networks, for example,
    under short RTT and small bandwidth (or small BDP) networks.  In
@@ -352,7 +394,7 @@ Table of Contents
                   [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
                   (t / RTT)                              (Eq. 4)
 
-4.3.  Concave Region
+4.4.  Concave Region
 
    When receiving an ACK in congestion avoidance, if CUBIC is not in the
    TCP-friendly region and cwnd is less than W_max, then CUBIC is in the
@@ -360,7 +402,7 @@ Table of Contents
    (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
    W_cubic(t+RTT) is calculated using Eq. 1.
 
-4.4.  Convex Region
+4.5.  Convex Region
 
    When receiving an ACK in congestion avoidance, if CUBIC is not in the
    TCP-friendly region and cwnd is larger than or equal to W_max, then
@@ -378,7 +420,7 @@ Table of Contents
    (W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
    W_cubic(t+RTT) is calculated using Eq. 1.
 
-4.5.  Multiplicative Decrease
+4.6.  Multiplicative Decrease
 
    When a packet loss is detected by duplicate ACKs or a network
    congestion is detected by ECN-Echo ACKs, CUBIC updates its W_max,
@@ -396,7 +438,7 @@ Table of Contents
    analysis of CUBIC much harder.  This adaptive adjustment of
    beta_cubic is an item for the next version of CUBIC.
 
-4.6.  Fast Convergence
+4.7.  Fast Convergence
 
    To improve the convergence speed of CUBIC, we add a heuristic in
    CUBIC.  When a new flow joins the network, existing flows in the
@@ -432,11 +474,11 @@ Table of Contents
    CUBIC flow and without any other traffic, the fast convergence SHOULD
    be disabled.
 
-4.7.  Timeout
+4.8.  Timeout
 
    In case of timeout, CUBIC follows Standard TCP to reduce cwnd
    [RFC5681], but sets ssthresh using beta_cubic (same as in
-   Section 4.5) that is different from Standard TCP [RFC5681].
+   Section 4.6) that is different from Standard TCP [RFC5681].
 
    During the first congestion avoidance after a timeout, CUBIC
    increases its congestion window size using Eq. 1, where t is the
@@ -444,7 +486,7 @@ Table of Contents
    K is set to 0, and W_max is set to the congestion window size at the
    beginning of the current congestion avoidance.
 
-4.8.  Slow Start
+4.9.  Slow Start
 
    CUBIC MUST employ a slow-start algorithm, when the cwnd is no more
    than ssthresh.  Among the slow-start algorithms, CUBIC MAY choose the
@@ -693,6 +735,11 @@ Table of Contents
               Control", RFC 5681, DOI 10.17487/RFC5681, September 2009,
               <https://www.rfc-editor.org/info/rfc5681>.
 
+   [RFC6298]  Paxson, V., Allman, M., Chu, J., and M. Sargent,
+              "Computing TCP's Retransmission Timer", RFC 6298,
+              DOI 10.17487/RFC6298, June 2011,
+              <https://www.rfc-editor.org/info/rfc6298>.
+
    [RFC6582]  Henderson, T., Floyd, S., Gurtov, A., and Y. Nishida, "The
               NewReno Modification to TCP's Fast Recovery Algorithm",
               RFC 6582, DOI 10.17487/RFC6582, April 2012,
@@ -794,6 +841,8 @@ B.1.  Since draft-eggert-tcpm-rfc8312bis-00
    *  acknowledge former co-authors (#18)
 
    *  prevent cwnd from becoming less than two (#9)
+
+   *  add list of variables and constants (#12)
 
 B.2.  Since RFC8312
 
