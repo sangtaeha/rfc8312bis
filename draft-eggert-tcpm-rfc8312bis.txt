@@ -277,9 +277,9 @@ Table of Contents
 4.1.1.  Constants of interest
 
    beta_cubic:  CUBIC multiplication decrease factor as described in
-      Section 4.6 C:
+      Section 4.6
 
-      constant that determines the aggressiveness of CUBIC in competing
+   C:  constant that determines the aggressiveness of CUBIC in competing
       with other congestion control algorithms in high BDP networks.
       Please see Section 5 for more explanation on how it is set.  The
       unit for C is segment / (second)^3
@@ -288,30 +288,30 @@ Table of Contents
 
    Variables required to implement CUBIC are described in this section.
 
-   RTT:  smoothed round-trip time in seconds calculated as described in
-      [RFC6298] cwnd:
+   RTT:  Smoothed round-trip time in seconds calculated as described in
+      [RFC6298]
 
-      Current congestion window in segments. ssthresh:
+   cwnd:  Current congestion window in segments
 
-      Current slow start threshold in segments.  W_max:
+   ssthresh:  Current slow start threshold in segments
 
-      Size of the cwnd in segments just before the cwnd is reduced in
-      the last congestion event.  W_last_max:
+   W_max:  Size of the cwnd in segments just before the cwnd is reduced
+      in the last congestion event
 
-      last value of W_max in segments before W_max is updated for the
-      current congestion event.  K:
+   W_last_max:  Last value of W_max in segments before W_max is updated
+      for the current congestion event
 
-      the time period in seconds it takes to increase the current
-      congestion window size to W_max W_cubic(t):
+   K:  The time period in seconds it takes to increase the current
+      congestion window size to W_max
 
-      Target value of the congestion window in segments at time t in
-      seconds based on the cubic increase function as described in
-      Section 4.2 W_est(t):
+   W_cubic(t):  Target value of the congestion window in segments at
+      time t in seconds based on the cubic increase function as
+      described in Section 4.2
 
-      an estimate for the congestion window in segments at time t in
-      seconds in the TCP-friendly region, that is, an estimate for the
-      congestion window if the TCP-NewReno congestion controller was
-      used.
+   W_est(t):  An estimate for the congestion window in segments at time
+      t in seconds in the TCP-friendly region, that is, an estimate for
+      the congestion window if the TCP-NewReno congestion controller was
+      used
 
 4.2.  Window Increase Function
 
