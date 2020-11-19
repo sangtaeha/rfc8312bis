@@ -6,9 +6,9 @@ TCPM                                                               L. Xu
 Internet-Draft                                                       UNL
 Obsoletes: 8312 (if approved)                                      S. Ha
 Intended status: Standards Track                                Colorado
-Expires: 22 May 2021                                      L. Eggert, Ed.
+Expires: 23 May 2021                                      L. Eggert, Ed.
                                                                   NetApp
-                                                        18 November 2020
+                                                        19 November 2020
 
 
                  CUBIC for Fast Long-Distance Networks
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 May 2021.
+   This Internet-Draft will expire on 23 May 2021.
 
 Copyright Notice
 
@@ -104,7 +104,8 @@ Table of Contents
      8.2.  Informative References
    Appendix A.  Acknowledgements
    Appendix B.  Changes from RFC8312
-     B.1.  Since RFC8312
+     B.1.  Since draft-eggert-tcpm-rfc8312bis-00
+     B.2.  Since RFC8312
    Authors' Addresses
 
 1.  Introduction
@@ -788,7 +789,13 @@ Appendix A.  Acknowledgements
 
 Appendix B.  Changes from RFC8312
 
-B.1.  Since RFC8312
+B.1.  Since draft-eggert-tcpm-rfc8312bis-00
+
+   *  acknowledge former co-authors (#18)
+
+   *  prevent cwnd from becoming less than two (#9)
+
+B.2.  Since RFC8312
 
    *  converted to markdown and xml2rfc v3
 
