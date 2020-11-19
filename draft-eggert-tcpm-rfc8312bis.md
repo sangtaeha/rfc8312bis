@@ -292,12 +292,52 @@ multiplexing, the convergence speed of CUBIC flows is reasonable.
 
 # CUBIC Congestion Control
 
+In this section, we discuss how the congestion window is updated
+during the different stages of the CUBIC congestion controller.
+
+## Definitions
+
 The unit of all window sizes in this document is segments of the
 maximum segment size (MSS), and the unit of all times is seconds.
-Let cwnd denote the congestion window size of a flow, and ssthresh
-denote the slow-start threshold.
 
-## Window Increase Function
+### Constants of interest
+
+beta_cubic:
+: CUBIC multiplication decrease factor as described in {{mult-dec}}
+C:
+: constant that determines the aggressiveness of CUBIC in competing
+  with other congestion control algorithms in high BDP networks. Please see
+  {{discussion}} for more explanation on how it is set. The unit for
+  C is segment / (second)^3
+
+### Variables of interest
+
+Variables required to implement CUBIC are described in this section.
+
+RTT:
+: smoothed round-trip time in seconds calculated as described in {{!RFC6298}}
+cwnd:
+: Current congestion window in segments.
+ssthresh:
+: Current slow start threshold in segments.
+W_max:
+: Size of the cwnd in segments just before the cwnd is reduced in the
+  last congestion event.
+W_last_max:
+: last value of W_max in segments before W_max is updated for the current
+  congestion event.
+K:
+: the time period in seconds it takes to increase the current congestion
+  window size to W_max
+W_cubic(t):
+: Target value of the congestion window in segments at time t in seconds
+  based on the cubic increase function as described in {{win-inc}}
+W_est(t):
+: an estimate for the congestion window in segments at time t in seconds
+  in the TCP-friendly region, that is, an estimate for the congestion
+  window if the TCP-NewReno congestion controller was used.
+
+## Window Increase Function {#win-inc}
 
 CUBIC maintains the acknowledgment (ACK) clocking of Standard TCP by
 increasing the congestion window only at the reception of an ACK. It
@@ -306,8 +346,7 @@ such as TCP-NewReno {{!RFC6582}}{{!RFC6675}}. During congestion avoidance
 after a congestion event where a packet loss is detected by duplicate
 ACKs or a network congestion is detected by ACKs with ECN-Echo flags
 {{!RFC3168}}, CUBIC changes the window increase function of Standard
-TCP. Suppose that W_max is the window size just before the window is
-reduced in the last congestion event.
+TCP.
 
 CUBIC uses the following window increase function:
 
@@ -315,9 +354,8 @@ CUBIC uses the following window increase function:
     W_cubic(t) = C * (t - K)^3 + W_max                (Eq. 1)
 ~~~
 
-where C is a constant fixed to determine the aggressiveness of window
-increase in high BDP networks, t is the elapsed time from the
-beginning of the current congestion avoidance, and K is the time
+where t is the elapsed time in seconds from the beginning of the
+current congestion avoidance, and K is the time
 period that the above function takes to increase the current window
 size to W_max if there are no further congestion events and is
 calculated using the following equation:
@@ -333,9 +371,7 @@ W_cubic(0)=W_max*beta_cubic. We discuss how we set beta_cubic in
 
 Upon receiving an ACK during congestion avoidance, CUBIC computes the
 window increase rate during the next RTT period using Eq. 1. It sets
-W_cubic(t+RTT) as the candidate target value of the congestion
-window, where RTT is the weighted average RTT calculated by Standard
-TCP.
+W_cubic(t+RTT) as the candidate target value of the congestion window.
 
 Depending on the value of the current congestion window size cwnd,
 CUBIC runs in three different modes.
@@ -736,6 +772,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 - acknowledge former co-authors (#18)
 - prevent cwnd from becoming less than two (#9)
+- add list of variables and constants (#12)
 
 ## Since RFC8312
 
