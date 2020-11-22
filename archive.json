@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-19T00:02:14.606078+00:00",
+  "timestamp": "2020-11-22T00:02:42.006606+00:00",
   "repo": "NTAP/rfc8312bis",
   "labels": [
     {
@@ -46,7 +46,7 @@
       ],
       "body": "As discussed in [this tcpm thread](https://mailarchive.ietf.org/arch/msg/tcpm/O7Q55oXcoI1XNBZ_wAQOMdhRQNY/), after fast convergence (section 4.6), the candidate target value of the congestion window may be less than the current congestion window. For example, say cwnd = 100, beta_cubic = .7 and a congestion event occurs:\r\n\r\n```\r\nW_max = cwnd = 100;\r\nW_max = W_max*(1.0+beta_cubic)/2.0 = 85   // further reduce W_max for fast convergence\r\n\r\ncwnd = cwnd * beta_cubic = 70\t          // window reduction\r\nW_cubic(0) = W_max * beta_cubic = 59.5\r\n```\r\n\r\nIf we were to enter congestion avoidance at this point, with a small enough RTT, the candidate target congestion window as calculated by W_cubic(t+RTT) may be less than the current congestion window (~59.5 < 70). \r\n\r\nThe suggestion in the thread from Lisong Xu and Vidhi Goel is to change Equation 2 to:\r\n```\r\nK = cubic_root((W_max - cwnd)/C) (Eq. 2)\r\n```\r\nwhere cwnd is the congestion window size at the beginning of the current congestion avoidance. This will ensure the target is greater than the current congestion window, and in my opinion is a more clear representation of what K represents.",
       "createdAt": "2020-11-13T23:36:02Z",
-      "updatedAt": "2020-11-18T23:39:46Z",
+      "updatedAt": "2020-11-20T14:55:01Z",
       "closedAt": null,
       "comments": [
         {
@@ -188,6 +188,83 @@
           "body": "> If we do not use variable origin_point, then it is possible that W_cubic(t) may be lower than the current cwnd. In this case, I would suggest changing Equation (1) as follows, which also contains the bug fix.\r\n> \r\n> ```\r\n>     W_cubic(t) = C*(t-K)^3 + W_max\r\n>     if (W_cubic(t) < cwnd)                      // lower bound\r\n>         W_cubic(t)  =  cwnd\r\n>     else if (W_cubic(t) > 2* cwnd)              // upper bound\r\n>         W_cubic(t)  =  2 * cwnd\r\n> where cwnd is the current congestion window size.\r\n> ```\r\n> \r\n> Below is a slightly revised Equation (2)\r\n> \r\n> ```\r\n>    if (cwnd_0 < W_max) {\r\n>         K = cubic_root(W_max - cwnd_0) / C             \r\n>     } else {\r\n>         K = 0\r\n>     }\r\n> where cwnd_0 is the congestion window at the beginning of a congestion avoidance stage, is calculated using beta_cubic in {{mult-dec}}, although implementations can further adjust the congestion window size based on other fast recovery mechanisms. We discuss how we set beta_cubic in {{mult-dec}} and how we set C in {{discussion}}.\r\n> ```\r\n\r\nIf I use cwnd_0 (which is beta_cubic * W_max) , then I don't need the else condition, right?",
           "createdAt": "2020-11-18T23:38:40Z",
           "updatedAt": "2020-11-18T23:39:07Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "How about revising Section 4.1 as follows?\r\n\r\nCUBIC uses the following window increase function:\r\n```\r\n       W_cubic(t) = C*(t-K)^3 + W_max (Eq. 1)\r\n```\r\n   where C is a constant fixed to determine the aggressiveness of window increase in high BDP networks and is discussed in Section 5, t is the elapsed time from the beginning of the current congestion avoidance stage, and K is the time period that the above function takes to increase the current window size to W_max if there are no further congestion events and is calculated using the following equation:\r\n```\r\n       K = cubic_root( (W_max-cwnd_0) /C)  (Eq. 2)\r\n```\r\n   where cwnd_0 is the congestion window at the beginning of the current congestion avoidance stage. In special cases, if cwnd_0 is greater than W_max, K is set to 0.\r\n\r\n   Upon receiving an ACK during congestion avoidance, CUBIC computes the target congestion window size after the next RTT as follows, where RTT is the weighted average RTT calculated by Standard TCP.\r\n```\r\n        target = W_Cubic(t + RTT)      // cwnd after a RTT\r\n        if (target < cwnd)             // lower bound\r\n            target = cwnd\r\n        else if (target > 2*cwnd)      // upper bound\r\n            target = 2 * cwnd\r\n```",
+          "createdAt": "2020-11-19T01:55:59Z",
+          "updatedAt": "2020-11-19T01:55:59Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "this looks good to me. I will update the PR with some minor text edits. ",
+          "createdAt": "2020-11-19T02:24:47Z",
+          "updatedAt": "2020-11-19T02:24:47Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thinking a bit more about it, I think cwnd_0 looks a bit confusing. Also, as we are adding text for special case (if cwnd > W_max),  and later to ensure target is within bounds, I think we should just call it `cwnd` and describe it as you did `where cwnd is the congestion window at the beginning of the current congestion avoidance stage`",
+          "createdAt": "2020-11-19T02:35:26Z",
+          "updatedAt": "2020-11-19T02:35:26Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@goelvidhi fine with me. Thanks.",
+          "createdAt": "2020-11-19T02:42:45Z",
+          "updatedAt": "2020-11-19T02:42:45Z"
+        },
+        {
+          "author": "rscheff",
+          "authorAssociation": "NONE",
+          "body": "> We calculate K only once at the beginning of a congestion avoidance stage.\r\n\r\nWhile this is a correct statement, there are many more events that signify the beginning of the CA stage than just coming out from slow-start. In the cubic implementaiton in FreeBSD, the recalculation of K was missed in most of these instances (after idle, RTO rewind, loss recovery*, ecn recovery*). \r\n\r\nAs a note from an implementer, mentioning these other cases that signify the beginning of the congestion avoidance stage may avoid issues where someone only thinks of the textbook example when cwnd > ssthresh as the start of CA...\r\n\r\n\r\n(*) strictly speaking, K should be recalculated once the loss/ecn recovery has finished; FreeBSD takes a shortcut here and calculates K when entering recovery rather after leaving recovery.\r\n",
+          "createdAt": "2020-11-19T11:02:53Z",
+          "updatedAt": "2020-11-19T11:02:53Z"
+        },
+        {
+          "author": "rscheff",
+          "authorAssociation": "NONE",
+          "body": "> Thinking a bit more about it, I think cwnd_0 looks a bit confusing. Also, as we are adding text for special case (if cwnd > W_max), and later to ensure target is within bounds, I think we should just call it `cwnd` and describe it as you did `where cwnd is the congestion window at the beginning of the current congestion avoidance stage`\r\n\r\nActually, reading \"cwnd\" in the formula by itself is more confusing to me, than referecing this by any other name; cwnd is the \"current\" cwnd on a casual glance; if it is NOT the current cwnd, but some state which has to be kept, use a differnt variable name in the formulas to make this clear (cwnd_0 or cwnd_base would be fine by me).",
+          "createdAt": "2020-11-19T11:05:20Z",
+          "updatedAt": "2020-11-19T11:05:20Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "> (*) strictly speaking, K should be recalculated once the loss/ecn recovery has finished; FreeBSD takes a shortcut here and calculates K when entering recovery rather after leaving recovery.\r\n\r\nI don't think there is any mention of K being calculated only when cwnd > ssthresh. K is always recalculated whenever there is a congestion event.\r\n\r\n\r\n\r\n> Actually, reading \"cwnd\" in the formula by itself is more confusing to me, than referecing this by any other name; cwnd is the \"current\" cwnd on a casual glance; if it is NOT the current cwnd, but some state which has to be kept, use a differnt variable name in the formulas to make this clear (cwnd_0 or cwnd_base would be fine by me).\r\n\r\n'cwnd' is current congestion window in that formula. As @lisongxu noted, `In special cases, if cwnd is greater than W_max, K is set to 0.`, this additional statement will clarify what one needs to do if it is greater than W_max.",
+          "createdAt": "2020-11-20T02:34:11Z",
+          "updatedAt": "2020-11-20T02:34:11Z"
+        },
+        {
+          "author": "sangtaeha",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@goelvidhi @rscheff  Using 'cwnd' looks okay to me, and an implementer can use any variable of her choice to reference or store this value, e.g., 'origin_point' or 'cwnd_0.' Thanks!",
+          "createdAt": "2020-11-20T08:48:40Z",
+          "updatedAt": "2020-11-20T08:48:40Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thanks @sangtaeha. Could you please review https://github.com/NTAP/rfc8312bis/pull/3? Thanks.",
+          "createdAt": "2020-11-20T08:59:35Z",
+          "updatedAt": "2020-11-20T08:59:35Z"
+        },
+        {
+          "author": "rscheff",
+          "authorAssociation": "NONE",
+          "body": "Sorry, I probably have missed something - K is recalculated at the beginning of a congestion avoidance phase, with the then-current cwnd. What would be the reason to store that value for later use (or why was it referred to as 'cwnd_0' or 'origin_point'? What uses are for that cwnd in the past in some implementations. (Still suffering from virtual jetlag, sorry).",
+          "createdAt": "2020-11-20T11:18:00Z",
+          "updatedAt": "2020-11-20T11:18:00Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@rscheff Thank you. In normal cases, we do not need to store that value (cwnd_0, or origin_point) for later use. ",
+          "createdAt": "2020-11-20T14:55:01Z",
+          "updatedAt": "2020-11-20T14:55:01Z"
         }
       ]
     },
@@ -205,7 +282,7 @@
       ],
       "body": "The idea of using alpha_aimd as defined below is to ensure that the congestion window growth for Cubic is similar to standard TCP as Cubic's reduction factor (0.3) is smaller than that of standard TCP (0.5)\r\n\r\nCurrently, alpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic) // for the entire TCP friendly region\r\n\r\nBut we think that once the cwnd in TF region reaches W_max, we should set the alpha_aimd to 1 to have similar behavior as standard TCP congestion algorithm (eg. NewReno)\r\n\r\nif (W_est < W_max)\r\n\talpha_aimd = 3*(1-beta_cubic)/(1+beta_cubic)\r\nelse\r\n\talpha_aimd = 1\r\n\r\nI'd be happy to work on a PR for this if folks think that this would be a good addition.",
       "createdAt": "2020-11-14T06:01:03Z",
-      "updatedAt": "2020-11-18T21:32:26Z",
+      "updatedAt": "2020-11-20T16:31:33Z",
       "closedAt": null,
       "comments": [
         {
@@ -263,6 +340,27 @@
           "body": "@goelvidhi , setting alpha to 1 reduces the RFC's current equation to W_est(t) = W_max*BETA + t/RTT, which is the equation I wrote. Sorry if that was unclear.",
           "createdAt": "2020-11-18T21:32:26Z",
           "updatedAt": "2020-11-18T21:32:26Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Hmm, I see your point.\r\nI use bytes_acked/cwnd instead of time t/RTT, so don't have the problem as you described. I need to think more about this issue.",
+          "createdAt": "2020-11-19T00:11:23Z",
+          "updatedAt": "2020-11-19T00:11:23Z"
+        },
+        {
+          "author": "maolson-msft",
+          "authorAssociation": "NONE",
+          "body": "@goelvidhi , I agree that issue #20 (replacing the equation-based window to an ACK-clocked one), if accepted, will resolve this jump discontinuity problem.",
+          "createdAt": "2020-11-19T21:17:01Z",
+          "updatedAt": "2020-11-19T21:17:01Z"
+        },
+        {
+          "author": "nealcardwell",
+          "authorAssociation": "NONE",
+          "body": "Yuchung Cheng ( @yuchungcheng ) and I chatted about this proposed fix above ( https://github.com/NTAP/rfc8312bis/issues/2#issue-742936185 ) and we agreed this looks like a nice and worthwhile fix, which we should be able to integrate\r\ninto the Linux TCP CUBIC implementation.\r\n\r\nThis should address the concern mentioned above from Lars about potential drift between Linux TCP CUBIC and the RFC ( https://github.com/NTAP/rfc8312bis/issues/2#issuecomment-727789321 ).\r\n",
+          "createdAt": "2020-11-20T16:29:09Z",
+          "updatedAt": "2020-11-20T16:31:33Z"
         }
       ]
     },
@@ -341,7 +439,7 @@
       "id": "MDU6SXNzdWU3NDM3MzU3ODc=",
       "title": "List of variables and constants",
       "url": "https://github.com/NTAP/rfc8312bis/issues/5",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "larseggert",
       "authorAssociation": "MEMBER",
       "assignees": [
@@ -352,8 +450,8 @@
       ],
       "body": "It would be useful to add a consolidated list of all constants and variables with their units and a brief description.",
       "createdAt": "2020-11-16T10:54:14Z",
-      "updatedAt": "2020-11-17T14:16:57Z",
-      "closedAt": null,
+      "updatedAt": "2020-11-19T17:02:45Z",
+      "closedAt": "2020-11-19T17:02:45Z",
       "comments": [
         {
           "author": "goelvidhi",
@@ -368,6 +466,41 @@
           "body": "Thank you, Vidhi!\r\n",
           "createdAt": "2020-11-17T02:37:54Z",
           "updatedAt": "2020-11-17T02:37:54Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@lisongxu  @sangtaeha could you please review https://github.com/NTAP/rfc8312bis/pull/12?",
+          "createdAt": "2020-11-19T02:25:58Z",
+          "updatedAt": "2020-11-19T02:25:58Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": " the unit of C should be MSS / S^3 ? Thanks",
+          "createdAt": "2020-11-19T02:41:20Z",
+          "updatedAt": "2020-11-19T02:41:20Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Is Segment / S^3 ok? (as I am calling the units of cwnd, W_max as segments)",
+          "createdAt": "2020-11-19T02:57:05Z",
+          "updatedAt": "2020-11-19T02:57:05Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Yes, thanks. ",
+          "createdAt": "2020-11-19T03:05:03Z",
+          "updatedAt": "2020-11-19T03:05:03Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "done. please review.",
+          "createdAt": "2020-11-19T03:07:22Z",
+          "updatedAt": "2020-11-19T03:07:22Z"
         }
       ]
     },
@@ -376,7 +509,7 @@
       "id": "MDU6SXNzdWU3NDM3NDA5ODE=",
       "title": "Units are missing or unclear",
       "url": "https://github.com/NTAP/rfc8312bis/issues/6",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "larseggert",
       "authorAssociation": "MEMBER",
       "assignees": [
@@ -387,8 +520,8 @@
       ],
       "body": "@martinthomson raised this on the QUIC slack:\r\n> What are the units of C?  What are the units of t? (edited) \r\nI'm assuming that the units of W_cubic(t) and W_max are bytes (or multiples of MSS, I guess).  But what about W_est(t)?\r\nW_est(t) = W_max*0.7 + 1.1 * t / RTT\r\n(Numbers approximated.)  That's a component in bytes, and a unit-less component. ",
       "createdAt": "2020-11-16T11:01:44Z",
-      "updatedAt": "2020-11-17T14:16:12Z",
-      "closedAt": null,
+      "updatedAt": "2020-11-19T17:02:45Z",
+      "closedAt": "2020-11-19T17:02:45Z",
       "comments": [
         {
           "author": "lisongxu",
@@ -561,7 +694,7 @@
       ],
       "body": "It would be nice to describe how a CUBIC sender should respond to ECN marks from the receiver. On receiving an ECE mark, the Linux CUBIC enters a CWR state and follows PRR.\r\n\r\nMore details about this are available in the document:\r\nhttps://docs.google.com/document/d/1QiDqBo94wKr1eptTFe6xAB0RWWlwYOy8VLOWrpVAie8/edit",
       "createdAt": "2020-11-17T05:52:58Z",
-      "updatedAt": "2020-11-18T19:37:05Z",
+      "updatedAt": "2020-11-21T19:46:12Z",
       "closedAt": null,
       "comments": [
         {
@@ -605,13 +738,20 @@
           "body": "Thanks, @tomhenderson. We will add that.",
           "createdAt": "2020-11-18T19:37:05Z",
           "updatedAt": "2020-11-18T19:37:05Z"
+        },
+        {
+          "author": "mohittahiliani",
+          "authorAssociation": "NONE",
+          "body": "Thank you all for the discussion!",
+          "createdAt": "2020-11-21T19:46:12Z",
+          "updatedAt": "2020-11-21T19:46:12Z"
         }
       ]
     },
     {
       "number": 14,
       "id": "MDU6SXNzdWU3NDQ3OTk3NzM=",
-      "title": "Some bugs to fix",
+      "title": "Overly aggressive window increase",
       "url": "https://github.com/NTAP/rfc8312bis/issues/14",
       "state": "OPEN",
       "author": "lisongxu",
@@ -624,7 +764,7 @@
       ],
       "body": "Since we are revising this RFC, I guess it is a good time to fix some Cubic bugs reported in [our NSDI 2019 paper](https://www.usenix.org/conference/nsdi19/presentation/sun) .\r\n\r\nThis RFC sets W_cubic(t + RTT) as the target window size after in the next RTT. However, this targe size may be too high, like even higher than 2 * cwnd (i.e., more aggressive than slow start), in the following special cases.\r\n\r\n   * case 1: RTT is extremely long. An extremely long RTT is very likely an indication of network congestion, in such an environment it is dangerous to set a very high target. \r\n\r\n  * case 2: after a long idle period (i.e., a big increase of t). This is a [bug reported and fixed by Google](http://bitsup.blogspot.com/2015/09/).\r\n\r\n  * case 3: after a long application rate-limited period (i.e., a bug increase of t). Similar to case 2\r\n\r\nTo be safer, we may change Equation (1) as follow to fix all the above bugs\r\n\r\n```\r\n    W_cubic(t) = C*(t-K)^3 + origin_point (Eq. 1)\r\n    if (W_cubic (t) > 2* cwnd)\r\n        W_cubic(t)  =  2 * cwnd\r\n```\r\nNote that, Linux Cubic already does something similar ([line 328](https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cubic.c#L328)) by limiting target to be no more then 1.5 * cwnd.\r\n\r\nThanks",
       "createdAt": "2020-11-17T14:44:17Z",
-      "updatedAt": "2020-11-18T14:28:34Z",
+      "updatedAt": "2020-11-20T16:28:34Z",
       "closedAt": null,
       "comments": [
         {
@@ -654,6 +794,104 @@
           "body": "What I proposed is a simple fix mainly for other implementations. For bug 2, Google already proposed a fix that has been implemented in [Linux](https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cubic.c#L151) and been adopted into the cubic RFC. (Section 5.8). Thanks ",
           "createdAt": "2020-11-18T14:28:34Z",
           "updatedAt": "2020-11-18T14:28:34Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "Would good to give this issue a more descriptive title.",
+          "createdAt": "2020-11-19T14:47:48Z",
+          "updatedAt": "2020-11-19T14:47:48Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@larseggert done",
+          "createdAt": "2020-11-19T19:31:35Z",
+          "updatedAt": "2020-11-19T19:31:35Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@yuchungcheng  Case 2 is already fixed by Google in function [bictcp_cwnd_event](https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cubic.c#L149). How about case 3? Does bictcp_cwnd_event also fix case 3? Thanks",
+          "createdAt": "2020-11-19T19:35:34Z",
+          "updatedAt": "2020-11-19T19:35:34Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@lisongxu  The fix to bound the CUBIC target cwnd is added to https://github.com/NTAP/rfc8312bis/pull/3. Let me know if there is any remaining items for this issue.",
+          "createdAt": "2020-11-20T04:17:28Z",
+          "updatedAt": "2020-11-20T04:17:28Z"
+        },
+        {
+          "author": "yuchungcheng",
+          "authorAssociation": "NONE",
+          "body": "I believe bictcp_cwnd_event does fix case 3, specifically on the comment of\n\" We were application limited (idle) for a while...\"\n\nThis commit message has more details:\ncommit 30927520dbae297182990bb21d08762bcc35ce1d\nAuthor: Eric Dumazet <edumazet@google.com>\nDate:   Wed Sep 9 21:55:07 2015 -0700\n\n    tcp_cubic: better follow cubic curve after idle period\n\n    Jana Iyengar found an interesting issue on CUBIC :\n\n    The epoch is only updated/reset initially and when experiencing losses.\n    The delta \"t\" of now - epoch_start can be arbitrary large after app idle\n    as well as the bic_target. Consequentially the slope (inverse of\n    ca->cnt) would be really large, and eventually ca->cnt would be\n    lower-bounded in the end to 2 to have delayed-ACK slow-start behavior.\n\n    This particularly shows up when slow_start_after_idle is disabled\n    as a dangerous cwnd inflation (1.5 x RTT) after few seconds of idle\n    time.\n\n    Jana initial fix was to reset epoch_start if app limited,\n    but Neal pointed out it would ask the CUBIC algorithm to recalculate the\n    curve so that we again start growing steeply upward from where cwnd is\n    now (as CUBIC does just after a loss). Ideally we'd want the cwnd growth\n    curve to be the same shape, just shifted later in time by the amount of\n    the idle period.\n\n    Reported-by: Jana Iyengar <jri@google.com>\n    Signed-off-by: Eric Dumazet <edumazet@google.com>\n    Signed-off-by: Yuchung Cheng <ycheng@google.com>\n    Signed-off-by: Neal Cardwell <ncardwell@google.com>\n    Cc: Stephen Hemminger <stephen@networkplumber.org>\n    Cc: Sangtae Ha <sangtae.ha@gmail.com>\n    Cc: Lawrence Brakmo <lawrence@brakmo.org>\n    Signed-off-by: David S. Miller <davem@davemloft.net>\n\nOn Thu, Nov 19, 2020 at 11:35 AM Lisong Xu <notifications@github.com> wrote:\n\n> @yuchungcheng <https://github.com/yuchungcheng> Case 2 is already fixed\n> by Google in function bictcp_cwnd_event\n> <https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cubic.c#L149>.\n> How about case 3? Does bictcp_cwnd_event also fix case 3? Thanks\n>\n> \u2014\n> You are receiving this because you were mentioned.\n> Reply to this email directly, view it on GitHub\n> <https://github.com/NTAP/rfc8312bis/issues/14#issuecomment-730591804>, or\n> unsubscribe\n> <https://github.com/notifications/unsubscribe-auth/AM5EPYAUMQWLOANKGDO7DEDSQVXRJANCNFSM4TYVHEFQ>\n> .\n>\n",
+          "createdAt": "2020-11-20T04:50:25Z",
+          "updatedAt": "2020-11-20T04:50:25Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "> @lisongxu The fix to bound the CUBIC target cwnd is added to #3. Let me know if there is any remaining items for this issue.\r\n\r\nCould I ask that we do individual PRs to address individual issues? It sometimes causes a little rebasing effort, but it's much easier to review such PRs compared to ones that contain changes for multiple issues.",
+          "createdAt": "2020-11-20T05:13:30Z",
+          "updatedAt": "2020-11-20T05:13:30Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@yuchungcheng Thanks.\r\n\r\nThe reason that I am not sure about case 3 is that Cubic still sends out packets just at a low rate limited by application instead of cwnd. If Cubic remains in case 3 for a long time,  cwnd will not be increased for a long time but it is not idle. As a result, I guess bictcp_cwnd_event does not fix case 3, because bictcp_cwnd_event only detects the idle period? Am I missing something? Thanks",
+          "createdAt": "2020-11-20T05:28:57Z",
+          "updatedAt": "2020-11-20T05:28:57Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "> > @lisongxu The fix to bound the CUBIC target cwnd is added to #3. Let me know if there is any remaining items for this issue.\r\n> \r\n> Could I ask that we do individual PRs to address individual issues? It sometimes causes a little rebasing effort, but it's much easier to review such PRs compared to ones that contain changes for multiple issues.\r\n\r\nSorry about that but the fix in #3 is incomplete without the bounds on target. Will try to keep them separate as much as possible.",
+          "createdAt": "2020-11-20T07:18:47Z",
+          "updatedAt": "2020-11-20T07:18:47Z"
+        },
+        {
+          "author": "yuchungcheng",
+          "authorAssociation": "NONE",
+          "body": "@lisongxu <https://github.com/lisongxu>  I see your point now -- however it\ngets tricky what the right action is.\n\nFor example, let's cwnd is 100, and the application keeps using only 99\npkts for 5 minutes w/o experiencing any losses (so it's\n\"application-limited\"), then starts using cwnd fully 1 second after. should\nt = 5m or 1s? 1s seems over-conservative afterall cwnd was nearly fully\nused all time.\n\nAn obvious opposite example is the application using the minimal cwnd of 1\nfor a long time.\n\nMy sense is, for most application-limited traffic eventually go idle.\nAddressing the idle period may be good enough (if we want to keep it\nsimple).\n\nOn Thu, Nov 19, 2020 at 9:29 PM Lisong Xu <notifications@github.com> wrote:\n\n> @yuchungcheng <https://github.com/yuchungcheng> Thanks.\n>\n> The reason that I am not sure about case 3 is that Cubic still sends out\n> packets just at a low rate limited by application instead of cwnd. If Cubic\n> remains in case 3 for a long time, cwnd will not be increased for a long\n> time but it is not idle. As a result, I guess bictcp_cwnd_event does not\n> fix case 3, because bictcp_cwnd_event only detects the idle period? Am I\n> missing something? Thanks\n>\n> \u2014\n> You are receiving this because you were mentioned.\n> Reply to this email directly, view it on GitHub\n> <https://github.com/NTAP/rfc8312bis/issues/14#issuecomment-730860015>, or\n> unsubscribe\n> <https://github.com/notifications/unsubscribe-auth/AM5EPYBPVJOSO3W35HWUL3LSQX5CNANCNFSM4TYVHEFQ>\n> .\n>\n",
+          "createdAt": "2020-11-20T07:28:16Z",
+          "updatedAt": "2020-11-20T07:28:16Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@yuchungcheng  Doesn't https://tools.ietf.org/html/rfc7661 solve the different app-limited scenarios?",
+          "createdAt": "2020-11-20T08:51:16Z",
+          "updatedAt": "2020-11-20T08:51:16Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@yuchungcheng Thank you! \r\n\r\nYes, we should avoid overly conservative (e.g., 1s in your example) and overly aggressive (e.g., 5m in your example). This is why I am suggesting a simple fix to set the lower bound (cwnd) and the upper bound (2*cwnd) to the target cwnd in the next RTT, and the detailed discussions can be found [in issue #1](https://github.com/NTAP/rfc8312bis/issues/1) . Thanks",
+          "createdAt": "2020-11-20T14:46:32Z",
+          "updatedAt": "2020-11-20T14:46:32Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@goelvidhi Thank you. That (rfc7661) requests a major change to Cubic, and I believe that the basic idea of rfc7661 is consistent with what we have been discussed (i.e., avoiding overly conservative and overly aggressive and being responsive to congestion). Thanks",
+          "createdAt": "2020-11-20T14:50:27Z",
+          "updatedAt": "2020-11-20T14:50:27Z"
+        },
+        {
+          "author": "nealcardwell",
+          "authorAssociation": "NONE",
+          "body": "AFAICT the effect of the proposed fix in the first message in this thread -- https://github.com/NTAP/rfc8312bis/issues/14#issue-744799773 -- would be to bound the rate of increase of the cwnd to at most doubling each round trip time. Is that the intent?\r\n\r\nThe Linux TCP CUBIC implementation has already always bounded the rate of increase of the cwnd to at most 1.5x per round trip time. Initially it did this implicitly (the logic only allowed cwnd increases on at most every alternate ACK), and then when the stretch ACKs fixes were put in place the bound became explicit. See:\r\n  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/net/ipv4/tcp_cubic.c?id=d578e18ce93f5d33a7120fd57c453e22a4c0fc37\r\n\r\nGiven that separate pre-existing bound of 1.5x per round trip, AFAICT the proposed fix of bounding to less than 2x per round trip would be NOP, AFAICT? Or perhaps I misunderstand the proposal.\r\n\r\nBy the way, for YouTube we found this implicit bound of 1.5x per round trip was important for keeping losses at a reasonable level. This has a large impact on behavior, and presumably big implications for fairness between CUBIC implementations. So this may be important to document in the RFC, if it is not already (I couldn't find it, but I may have just missed it).\r\n",
+          "createdAt": "2020-11-20T16:19:18Z",
+          "updatedAt": "2020-11-20T16:22:03Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@nealcardwell Yes, you are right that Linux has already implemented the 1.5x upper bound. I am fine to change the upper bound from 2.0x to 1.5x. What is important is to add an upper bound to RFC to make sure that all other implementations also implement something similar. Thanks\r\n\r\n",
+          "createdAt": "2020-11-20T16:28:34Z",
+          "updatedAt": "2020-11-20T16:28:34Z"
         }
       ]
     },
@@ -738,11 +976,15 @@
       "state": "OPEN",
       "author": "larseggert",
       "authorAssociation": "MEMBER",
-      "assignees": [],
-      "labels": [],
+      "assignees": [
+        "goelvidhi"
+      ],
+      "labels": [
+        "design"
+      ],
       "body": "Yuchung Cheng [wrote](https://mailarchive.ietf.org/arch/msg/tcpm/KUQtS5nnRA1TaBzF2M2tnmTryGQ):\r\n>I'd recommend replacing the modelled TCP Reno window approach in\r\nsection 4.2 with an AIMD emulation (Linux's approach).\r\n>\r\n>In our experience, TCP-friendly regions are the predominant mode of\r\n(Linux) Cubic for any regular Internet connection. IOW Cubic is often\r\n\"Reno\" unless the loss rate is abysmal. The modelled approach is based\r\non a simple bulk transfer where modern network applications are mostly\r\nstructured traffic (burst, idle, repeat). Under such traffic\r\nstructures the model has two issues:\r\n>\r\n>The model assumes cwnd overshoot causes losses that are repaired in\r\none round of fast recovery. In reality, the losses are often due to\r\nbursts to short messages, causing more rounds and even timeouts to\r\nrepair. So the overall loss rate \"p\" tends to be higher than the ideal\r\nmodel, causing the model to underestimate the window (hence runs in a\r\nmore conservative Reno). Instead Linux's approach is to simply emulate\r\nReno AIMD based on the number of packets per ACK. This also avoids\r\nsquare-root operation.",
       "createdAt": "2020-11-18T08:27:38Z",
-      "updatedAt": "2020-11-18T19:40:06Z",
+      "updatedAt": "2020-11-19T19:37:13Z",
       "closedAt": null,
       "comments": [
         {
@@ -751,6 +993,152 @@
           "body": "I agree, and this is reasonable, as CUBIC is based on time t but AIMD is not.  Thanks",
           "createdAt": "2020-11-18T19:40:05Z",
           "updatedAt": "2020-11-18T19:40:05Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "I am not sure what's the AI here - do we need to modify Eq. 3?",
+          "createdAt": "2020-11-19T03:19:06Z",
+          "updatedAt": "2020-11-19T03:19:06Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Eq 3 is fine. But we need to change Eq 4 to update W_est for each ACK, instead of using that t/RTT.\r\n\r\nThanks",
+          "createdAt": "2020-11-19T03:48:48Z",
+          "updatedAt": "2020-11-19T18:06:25Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "In my earlier comment, AI = Action Item.\r\n\r\nIn Apple's implementation, I use bytes_acked / cwnd per ACK received instead of t/RTT. That ensures once the entire congestion window is acknowledged, the increase is 1MSS. I didn't file an issue for this as I thought this is an implementation choice. Does the below look like it:\r\n```\r\nOn every ACK,\r\nW_est = W_max*beta_cubic +\r\n                   [3*(1-beta_cubic)/(1+beta_cubic)] * (bytes_acked/cwnd)\r\n```",
+          "createdAt": "2020-11-19T03:55:46Z",
+          "updatedAt": "2020-11-19T03:57:20Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "How about the following?\r\n\r\nAt the beginning of a congestion avoidance stage, \r\n```\r\n    W_est = cwnd\r\n```\r\n\r\nOn every ACK,\r\n```\r\n   W_est += [3*(1-beta_cubic)/(1+beta_cubic)] * (Segments_acked/cwnd)\r\n```\r\n\r\n\r\n\r\n",
+          "createdAt": "2020-11-19T04:34:39Z",
+          "updatedAt": "2020-11-19T04:34:39Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Yes, that's how an implementation would do it.\r\n\r\nWith this proposal, I think https://github.com/NTAP/rfc8312bis/issues/2 would be good to address as well. I think when we use segments_acked/cwnd instead of t/RTT, the W_est growth after it reached W_max, should use alpha_aimd = 1.",
+          "createdAt": "2020-11-19T05:50:44Z",
+          "updatedAt": "2020-11-19T05:50:44Z"
+        },
+        {
+          "author": "rscheff",
+          "authorAssociation": "NONE",
+          "body": "FYI: freebsd is following the rtt-based tcp-friendly approach. However, we are not particularly fond of this due to the interaction with app-limited/discontinous data availablilty. Changing this into a bytes_acked/cwnd approach, which removes the RTT during that region, sounds good.",
+          "createdAt": "2020-11-19T11:28:15Z",
+          "updatedAt": "2020-11-19T11:28:15Z"
+        },
+        {
+          "author": "yuchungcheng",
+          "authorAssociation": "NONE",
+          "body": "I like Lisong's proposal to use Segments_acked or Rscheff's Bytes_acked. We have changed Linux Cubic several years ago to perform well under the prevalent ACK-thining/compression world (notably for cable and wireless networks). Sometimes we get one ACK for more than one hundred segments.\r\n\r\nhttps://www.spinics.net/lists/netdev/msg314082.html\r\n",
+          "createdAt": "2020-11-19T17:47:37Z",
+          "updatedAt": "2020-11-19T17:47:37Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thanks, @yuchungcheng . Could you please take a look at [issue 14](https://github.com/NTAP/rfc8312bis/issues/14) for a bug that Google fixed?",
+          "createdAt": "2020-11-19T19:37:12Z",
+          "updatedAt": "2020-11-19T19:37:12Z"
+        }
+      ]
+    },
+    {
+      "number": 21,
+      "id": "MDU6SXNzdWU3NDY0NTg2NDk=",
+      "title": "Clear definition of \"the beginning of the current congestion avoidance stage\"",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/21",
+      "state": "CLOSED",
+      "author": "rscheff",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "While improving the FreeBSD Cubic implementation, we found that there is ambiguity as to when to define \"the beginning of the current congestion avoidance stage\". However, for the classical design assumption for TCP with infinite data available to send, the minutae don't matter much.\r\n\r\nBut in a corner case, let us assume the send buffer allows the transmission of exactly ssthresh bytes. After that, the application stalls for some time (in multiples of the RTT) before making more data available to send...\r\n\r\nIn the original code, t(0) was set, once cwnd > ssthresh (before the application stall above). \r\n\r\nHowever, that can lead to excessive jumps, when cubic re-calculates cwnd the next time data is available for sending, as an excessive amount of time may have passed.\r\n\r\nWhen FreeBSD is doing now ([https://reviews.freebsd.org/D25746](D25746)) is to track properly, when the first time to recalculate cwnd is after having left ssthresh (or having been application limited, which is similar).\r\n\r\nWe have not looked closely how app-limited and request/response type flows are handled with cubic in Linux or other OS.\r\n\r\nA clear definition as to when to start taking the base t(0) for calculating t in the cubic formular may be good to have.",
+      "createdAt": "2020-11-19T10:41:56Z",
+      "updatedAt": "2020-11-19T14:47:23Z",
+      "closedAt": "2020-11-19T14:47:22Z",
+      "comments": [
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thanks, @rscheff . This is what we are discussing in \"[Some bugs to fix #14](https://github.com/NTAP/rfc8312bis/issues/14)\".\r\n\r\nWhat Linux does and what the current RFC 8312 specifies is \"Section 5.8: CUBIC does not raise its congestion window size if the flow is currently limited by the application instead of the congestion window.  In case of long periods when cwnd has not been updated due  to the application rate limit, such as idle periods, t in Eq. 1 MUST NOT include these periods; otherwise, W_cubic(t) might be very high after restarting from these periods.\"\r\n\r\n",
+          "createdAt": "2020-11-19T14:08:14Z",
+          "updatedAt": "2020-11-19T14:08:14Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "Closing this, since the discussion is in #14 ",
+          "createdAt": "2020-11-19T14:47:22Z",
+          "updatedAt": "2020-11-19T14:47:22Z"
+        }
+      ]
+    },
+    {
+      "number": 23,
+      "id": "MDU6SXNzdWU3NDc4MTk0MzM=",
+      "title": "Add handling of spurious retransmissions",
+      "url": "https://github.com/NTAP/rfc8312bis/issues/23",
+      "state": "OPEN",
+      "author": "huitema",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "I wrote up a blog last year describing [my experience implementing Cubic for QUIC](https://huitema.wordpress.com/2019/11/11/implementing-cubic-congestion-control-in-quic/). There were three points:\r\n\r\n1) Issues with the formula base \"Reno compatibility\", which is documented in issue #20 \r\n2) Sensitivity of Hystart to delay jitter, which is more an issue with Hystart than with Cubic\r\n3) Sensitivity to spurious repeats\r\n\r\nI think that third issue should be addressed in the revised RFC. The basic problem is that any detected packet loss causes the host to reduce the window and start a new epoch. In some environments we can see spurious loss detection, caused for example by delayed ACKs or out of order delivery. These spurious losses can be easily identified in QUIC, and with some extra work in TCP. It would be useful if the revised RFC has a section on handling spurious losses.\r\n\r\nThe handling that I did implement was simple: reset the epoch parameters to the value of the previous epoch, before the loss. Documenting at least that would be nice.\r\n\r\n",
+      "createdAt": "2020-11-20T21:56:16Z",
+      "updatedAt": "2020-11-21T06:08:05Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "nealcardwell",
+          "authorAssociation": "NONE",
+          "body": "Fixing this would be great, since spurious retransmissions (e.g. from reordering) are so common. FWIW, undoing cwnd reductions is not correctly implemented in Linux TCP CUBIC (only cwnd is reverted, not the epoch parameters), but @yuchungcheng has a patch for this that we should be able to incorporate into Linux.\r\n",
+          "createdAt": "2020-11-20T22:17:58Z",
+          "updatedAt": "2020-11-20T22:17:58Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "This is a good suggestion. Hopefully, it will promote any future congestion controllers draft to include this scenario among others, i.e. aim for completeness.",
+          "createdAt": "2020-11-21T00:06:21Z",
+          "updatedAt": "2020-11-21T00:06:21Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thank you all, yes, I agree that this is a very good suggestion.  \r\n\r\nWhat are some common reasons for spurious retransmissions?   \r\n\r\n@nealcardwell you mentioned packet ordering, do you know why it is common (now)? because of more wireless/cellular networks?  \r\n\r\n@huitema you mentioned ACK compression in your blog (interesting to read!), could you please explain why ACK compression leads to spurious retransmissions? \r\n\r\nThank you!\r\n",
+          "createdAt": "2020-11-21T03:40:22Z",
+          "updatedAt": "2020-11-21T03:40:22Z"
+        },
+        {
+          "author": "nealcardwell",
+          "authorAssociation": "NONE",
+          "body": "@lisongxu the RACK draft has one perspective on some reasons for reordering: https://tools.ietf.org/html/draft-ietf-tcpm-rack-13#section-2.2\r\n\r\n   3.  Packet reordering.  Link-layer protocols (e.g., 802.11 block\r\n       ACK), link bonding, or routers' internal load-balancing (e.g.,\r\n       ECMP) can deliver TCP segments out of order.  ...",
+          "createdAt": "2020-11-21T03:54:55Z",
+          "updatedAt": "2020-11-21T03:54:55Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "NONE",
+          "body": "I observed that on some wireless connections (WiFi plus fixed LTE), one of the routers on path was bundling short packets together and only sending them when the bundle had attained a sufficient size. (QUIC ACK are short packets, but they are encrypted and the routers cannot tell them from other short packets.) In my case, the packet bundling process caused extra delays, and sometimes the timers were firing.\r\n\r\nAs for reordering, that's very common too. @nealcardwell has access to much better telemetry than I do, but one behavior I saw was routers putting short packets in front of the queue, before longer packets. That can confuse algorithms like RACK.",
+          "createdAt": "2020-11-21T03:58:03Z",
+          "updatedAt": "2020-11-21T03:58:03Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Thank you, Neal and Christian!",
+          "createdAt": "2020-11-21T06:08:04Z",
+          "updatedAt": "2020-11-21T06:08:04Z"
         }
       ]
     }
@@ -766,15 +1154,15 @@
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
-      "body": "I have tried to address https://github.com/NTAP/rfc8312bis/issues/1. I have kept the Eq. 2 as is and added justification for further simplification / generalization to address the fast convergence issue with Eq. 2.\r\n\r\nI apologize in advance if I created this PR too soon (I thought this is a major issue as most Cubic implementation perform Fast Convergence).",
+      "body": "I have tried to address https://github.com/NTAP/rfc8312bis/issues/1. I have kept the Eq. 2 as is and added justification for further simplification / generalization to address the fast convergence issue with Eq. 2.\r\n\r\nI apologize in advance if I created this PR too soon (I thought this is a major issue as most Cubic implementation perform Fast Convergence).\r\n\r\nCloses #1 and https://github.com/NTAP/rfc8312bis/issues/14",
       "createdAt": "2020-11-14T06:55:10Z",
-      "updatedAt": "2020-11-18T23:36:51Z",
+      "updatedAt": "2020-11-21T14:56:57Z",
       "baseRepository": "NTAP/rfc8312bis",
       "baseRefName": "main",
-      "baseRefOid": "d3b35ad56a2e66dd10316f5e762a522454793064",
+      "baseRefOid": "14c3ad8e5141acf1d65b1e1e00f5070ac52807a2",
       "headRepository": "goelvidhi/rfc8312bis",
       "headRefName": "updated-K",
-      "headRefOid": "bd3a378f42c08cbdbe1d8a93d445f7f4bca62e55",
+      "headRefOid": "3093d02b3c5d23f0117440ed674f50fdd8343b78",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
@@ -800,6 +1188,48 @@
           "body": "> @goelvidhi Sorry for the confusion. I didn't mean to remove the left parenthesis. (W_max - cwnd)/C needs to be inside the cubic root. So it should be\r\n> \r\n> ```\r\n> K = cubic_root((W_max - cwnd) / C)\r\n> ~~\r\n> ```\r\n\r\nMy bad. Fixed it",
           "createdAt": "2020-11-18T23:36:50Z",
           "updatedAt": "2020-11-18T23:36:50Z"
+        },
+        {
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "body": "@goelvidhi should be able to add reviewers in the sidebar on the right (top item). Let me know if you don't see the option, might be a permissions things.",
+          "createdAt": "2020-11-19T05:18:32Z",
+          "updatedAt": "2020-11-19T05:18:32Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "> Please also add a bullet about this PR to the changelog in the appendix.\r\n\r\ndone\r\n\r\n@lisongxu @larseggert @sangtaeha I have added the modifications recommended on the issue so far. Could you please review?",
+          "createdAt": "2020-11-20T04:15:03Z",
+          "updatedAt": "2020-11-20T04:15:03Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@lisongxu @sangtaeha could you please review? Thank you.",
+          "createdAt": "2020-11-20T08:25:59Z",
+          "updatedAt": "2020-11-20T08:25:59Z"
+        },
+        {
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@vidhigoel-apple Please change the upper bound from 2*cwnd to 1.5*cwnd to be consistent with Linux and be more conservative (safer).  Thank you!",
+          "createdAt": "2020-11-20T18:23:15Z",
+          "updatedAt": "2020-11-20T18:23:15Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "Added the changes for the review comments so far. Please review.",
+          "createdAt": "2020-11-21T00:41:48Z",
+          "updatedAt": "2020-11-21T00:41:48Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@lisongxu could you please review this change?",
+          "createdAt": "2020-11-21T07:50:37Z",
+          "updatedAt": "2020-11-21T07:50:37Z"
         }
       ],
       "reviews": [
@@ -819,13 +1249,13 @@
               "originalPosition": 4,
               "body": "Please add an anchor for this section and use it in this reference, instead of hardcoding the value. (Check how `mult-dec` is used in the current text for an example.)",
               "createdAt": "2020-11-16T10:56:32Z",
-              "updatedAt": "2020-11-18T23:35:38Z"
+              "updatedAt": "2020-11-21T00:37:28Z"
             },
             {
               "originalPosition": 11,
               "body": "I think it would be clearer if Eq. 2 were modified to include a conditional, rather than defining a separate equation for this case. That way, we also wouldn't need to renumber all the following equations.",
               "createdAt": "2020-11-16T10:57:57Z",
-              "updatedAt": "2020-11-18T23:35:38Z"
+              "updatedAt": "2020-11-21T00:37:28Z"
             }
           ]
         },
@@ -845,7 +1275,7 @@
               "originalPosition": 4,
               "body": "Removed this reference in the new text.",
               "createdAt": "2020-11-17T02:34:46Z",
-              "updatedAt": "2020-11-18T23:35:38Z"
+              "updatedAt": "2020-11-21T00:37:28Z"
             }
           ]
         },
@@ -865,7 +1295,7 @@
               "originalPosition": 11,
               "body": "Done. Added the conditional based on the issue discussion with @lisongxu ",
               "createdAt": "2020-11-17T02:35:14Z",
-              "updatedAt": "2020-11-18T23:35:38Z"
+              "updatedAt": "2020-11-21T00:37:28Z"
             }
           ]
         },
@@ -893,6 +1323,191 @@
           "body": "",
           "createdAt": "2020-11-18T10:46:40Z",
           "updatedAt": "2020-11-18T10:46:41Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MDg4OTk5",
+          "commit": {
+            "abbreviatedOid": "bd3a378"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "CHANGES_REQUESTED",
+          "body": "Please also add a bullet about this PR to the changelog in the appendix.",
+          "createdAt": "2020-11-19T05:19:42Z",
+          "updatedAt": "2020-11-19T05:19:42Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTA5OTg3",
+          "commit": {
+            "abbreviatedOid": "c770536"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "CHANGES_REQUESTED",
+          "body": "",
+          "createdAt": "2020-11-20T05:14:12Z",
+          "updatedAt": "2020-11-20T05:14:51Z",
+          "comments": [
+            {
+              "originalPosition": 80,
+              "body": "issue number missing",
+              "createdAt": "2020-11-20T05:14:12Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTMyMDIz",
+          "commit": {
+            "abbreviatedOid": "aed3ae5"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-20T05:51:21Z",
+          "updatedAt": "2020-11-20T05:51:22Z",
+          "comments": [
+            {
+              "originalPosition": 80,
+              "body": "fixed",
+              "createdAt": "2020-11-20T05:51:21Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTMyMzUy",
+          "commit": {
+            "abbreviatedOid": "aed3ae5"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-20T05:52:22Z",
+          "updatedAt": "2020-11-20T05:52:23Z",
+          "comments": [
+            {
+              "originalPosition": 5,
+              "body": "Please point to the issue(s) and not the PR number",
+              "createdAt": "2020-11-20T05:52:23Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTQ5NDY4",
+          "commit": {
+            "abbreviatedOid": "aed3ae5"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-20T06:41:52Z",
+          "updatedAt": "2020-11-20T06:41:52Z",
+          "comments": [
+            {
+              "originalPosition": 5,
+              "body": "oh... I thought the previous update logs were pointing to PR #. Do you want me to fix them all?",
+              "createdAt": "2020-11-20T06:41:52Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTU0Njk2",
+          "commit": {
+            "abbreviatedOid": "aed3ae5"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-20T06:54:07Z",
+          "updatedAt": "2020-11-20T06:54:08Z",
+          "comments": [
+            {
+              "originalPosition": 5,
+              "body": "Yes, please. (I thought I had checked that they were pointing at issues, but maybe I was wrong.)",
+              "createdAt": "2020-11-20T06:54:07Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTY1MDQz",
+          "commit": {
+            "abbreviatedOid": "be5adb4"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-20T07:16:29Z",
+          "updatedAt": "2020-11-20T07:16:29Z",
+          "comments": [
+            {
+              "originalPosition": 5,
+              "body": "done",
+              "createdAt": "2020-11-20T07:16:29Z",
+              "updatedAt": "2020-11-21T00:37:28Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MTY3MDEw",
+          "commit": {
+            "abbreviatedOid": "be5adb4"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2020-11-20T07:21:00Z",
+          "updatedAt": "2020-11-20T07:21:00Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1MzAyNjA0",
+          "commit": {
+            "abbreviatedOid": "be5adb4"
+          },
+          "author": "sangtaeha",
+          "authorAssociation": "COLLABORATOR",
+          "state": "CHANGES_REQUESTED",
+          "body": "@goelvidhi This looks good. We may also add some explanation for why we have low and upper bounds for the target? The following sentence or slightly modified one could be added to the end of the sentence in Line #389.\r\n\"The lower and upper bounds ensure that CUBIC's window increase rate is non-decreasing but is less than the rate of slow start.\"",
+          "createdAt": "2020-11-20T10:23:50Z",
+          "updatedAt": "2020-11-20T10:28:53Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1ODc4NDI2",
+          "commit": {
+            "abbreviatedOid": "3093d02"
+          },
+          "author": "sangtaeha",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "Great. Thanks.",
+          "createdAt": "2020-11-21T03:15:42Z",
+          "updatedAt": "2020-11-21T03:15:42Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1OTcxNjUz",
+          "commit": {
+            "abbreviatedOid": "3093d02"
+          },
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "Thank you, Vidhi!",
+          "createdAt": "2020-11-21T14:56:57Z",
+          "updatedAt": "2020-11-21T14:56:57Z",
           "comments": []
         }
       ]
@@ -1006,25 +1621,42 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NTIyMjU1NjA3",
       "title": "List of variables and constants",
       "url": "https://github.com/NTAP/rfc8312bis/pull/12",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "goelvidhi",
       "authorAssociation": "COLLABORATOR",
       "assignees": [],
       "labels": [],
       "body": "I have tried to add a new section for definition of variables and constants with their respective units. I removed some of the redundant definitions. Resolves https://github.com/NTAP/rfc8312bis/issues/5 and https://github.com/NTAP/rfc8312bis/issues/6",
       "createdAt": "2020-11-17T09:10:30Z",
-      "updatedAt": "2020-11-18T23:28:23Z",
+      "updatedAt": "2020-11-19T17:02:45Z",
       "baseRepository": "NTAP/rfc8312bis",
       "baseRefName": "main",
-      "baseRefOid": "de7c07989519e3e09988eead849207eeeab05352",
+      "baseRefOid": "b8110cabbcf450aeff1a50e7aadc142aabba3ea2",
       "headRepository": "goelvidhi/rfc8312bis",
       "headRefName": "variables-definition",
-      "headRefOid": "75ba076a3ebf69a213c05f28cee847a2cbb0f1d4",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
-      "comments": [],
+      "headRefOid": "8166dfce62ce53832af8d13c83cf82970fe0698d",
+      "closedAt": "2020-11-19T17:02:45Z",
+      "mergedAt": "2020-11-19T17:02:45Z",
+      "mergedBy": "larseggert",
+      "mergeCommit": {
+        "oid": "a0d86c209eeb1fe9597beeca7f89b7d66cf41b98"
+      },
+      "comments": [
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "@larseggert @sangtaeha @lisongxu could you please review the changes in this PR?\r\nAs the changes here will conflict with https://github.com/NTAP/rfc8312bis/pull/3, I prefer to get this one merged before I start updating #3. Thanks.",
+          "createdAt": "2020-11-19T03:25:35Z",
+          "updatedAt": "2020-11-19T03:25:35Z"
+        },
+        {
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "body": "> In addition to what I highlighted inline, please also add a bullet about this PR to the changelog in the appendix.\r\n\r\ndone.\r\nWaiting for @sangtaeha's review. :-)",
+          "createdAt": "2020-11-19T06:43:32Z",
+          "updatedAt": "2020-11-19T08:22:08Z"
+        }
+      ],
       "reviews": [
         {
           "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTMyMTYzMjE3",
@@ -1042,25 +1674,25 @@
               "originalPosition": 28,
               "body": "Cite the RFC instead of saying \"Standard TCP\", which doesn't really exist?",
               "createdAt": "2020-11-17T09:19:28Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             },
             {
               "originalPosition": 30,
               "body": "```suggestion\r\n: Current congestion window in segments.\r\n```",
               "createdAt": "2020-11-17T09:20:11Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             },
             {
               "originalPosition": 35,
               "body": "Should this definition use `cwnd`?",
               "createdAt": "2020-11-17T09:22:49Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             },
             {
               "originalPosition": 48,
               "body": "```suggestion\r\n  window if the TCP-NewReno congestion controller was used.\r\n```",
               "createdAt": "2020-11-17T09:23:41Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1080,7 +1712,7 @@
               "originalPosition": 35,
               "body": "sure",
               "createdAt": "2020-11-17T09:25:10Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1100,7 +1732,7 @@
               "originalPosition": 28,
               "body": "Should this be smoothed RTT? I can cite 793 if we agree to call it smoothed RTT",
               "createdAt": "2020-11-18T07:09:49Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1120,7 +1752,7 @@
               "originalPosition": 28,
               "body": "Shouldn't it be RFC6298? And I think it should be SRTT.\r\n\r\nCC'ing @lisongxu @sangtaeha for their input.",
               "createdAt": "2020-11-18T07:15:51Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1140,7 +1772,7 @@
               "originalPosition": 28,
               "body": "Yes, you are right that we should cite RFC6298. Waiting for other reviewers' input before I make this change.",
               "createdAt": "2020-11-18T07:46:06Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1160,7 +1792,7 @@
               "originalPosition": 5,
               "body": "This should probably be a subsection?",
               "createdAt": "2020-11-18T10:44:14Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1180,7 +1812,7 @@
               "originalPosition": 5,
               "body": "ok, will do a subsection under CUBIC Congestion Control",
               "createdAt": "2020-11-18T22:32:54Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1200,7 +1832,7 @@
               "originalPosition": 5,
               "body": "done. How can I convert the text document to the html version to see how the sections look?",
               "createdAt": "2020-11-18T23:04:32Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
         },
@@ -1220,9 +1852,128 @@
               "originalPosition": 5,
               "body": "For some reason, the PR is not getting updated with my new commits to goelvidhi/rfc8312bis. The repo shows the changes but the PR doesn't. What am I doing wrong?",
               "createdAt": "2020-11-18T23:20:59Z",
-              "updatedAt": "2020-11-18T23:28:23Z"
+              "updatedAt": "2020-11-19T05:59:40Z"
             }
           ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTMzOTgzNTU2",
+          "commit": {
+            "abbreviatedOid": "75ba076"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-19T00:13:31Z",
+          "updatedAt": "2020-11-19T00:13:32Z",
+          "comments": [
+            {
+              "originalPosition": 5,
+              "body": "Ah, it got updated after some time.",
+              "createdAt": "2020-11-19T00:13:32Z",
+              "updatedAt": "2020-11-19T05:59:40Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MDYzODc3",
+          "commit": {
+            "abbreviatedOid": "f03b088"
+          },
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2020-11-19T03:55:11Z",
+          "updatedAt": "2020-11-19T03:55:11Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MDg3ODM2",
+          "commit": {
+            "abbreviatedOid": "f03b088"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "CHANGES_REQUESTED",
+          "body": "In addition to what I highlighted inline, please also add a bullet about this PR to the changelog in the appendix.",
+          "createdAt": "2020-11-19T05:16:08Z",
+          "updatedAt": "2020-11-19T05:16:49Z",
+          "comments": [
+            {
+              "originalPosition": 15,
+              "body": "I don't think we need this third-layer subsection heading, since it is the only one in this section.",
+              "createdAt": "2020-11-19T05:16:08Z",
+              "updatedAt": "2020-11-19T05:59:40Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MDk3NDMy",
+          "commit": {
+            "abbreviatedOid": "f03b088"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-19T05:44:53Z",
+          "updatedAt": "2020-11-19T05:44:53Z",
+          "comments": [
+            {
+              "originalPosition": 15,
+              "body": "There are actually two:\r\n1. Constants\r\n2. Variables\r\n\r\nDo we want to combine them?",
+              "createdAt": "2020-11-19T05:44:53Z",
+              "updatedAt": "2020-11-19T05:59:40Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MTE4ODEz",
+          "commit": {
+            "abbreviatedOid": "8166dfc"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-19T06:39:18Z",
+          "updatedAt": "2020-11-19T06:39:18Z",
+          "comments": [
+            {
+              "originalPosition": 15,
+              "body": "No, I must have misread the diff. Nevermind :-)",
+              "createdAt": "2020-11-19T06:39:18Z",
+              "updatedAt": "2020-11-19T06:39:18Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0MTE4OTM1",
+          "commit": {
+            "abbreviatedOid": "8166dfc"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2020-11-19T06:39:36Z",
+          "updatedAt": "2020-11-19T06:39:36Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM0NjQ1MTQ3",
+          "commit": {
+            "abbreviatedOid": "8166dfc"
+          },
+          "author": "sangtaeha",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "The changes look good to me. Thanks!",
+          "createdAt": "2020-11-19T16:47:59Z",
+          "updatedAt": "2020-11-19T16:47:59Z",
+          "comments": []
         }
       ]
     },
@@ -1301,24 +2052,26 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NTIzMDAyMzM2",
       "title": "Add changelog relative to -00",
       "url": "https://github.com/NTAP/rfc8312bis/pull/19",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "larseggert",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "",
       "createdAt": "2020-11-18T08:13:20Z",
-      "updatedAt": "2020-11-18T22:31:24Z",
+      "updatedAt": "2020-11-19T05:13:37Z",
       "baseRepository": "NTAP/rfc8312bis",
       "baseRefName": "main",
       "baseRefOid": "de7c07989519e3e09988eead849207eeeab05352",
       "headRepository": "NTAP/rfc8312bis",
       "headRefName": "changes-from-00",
       "headRefOid": "8aa3dd2607f511122027f5ae15fddb3446d4f01c",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
+      "closedAt": "2020-11-19T05:13:34Z",
+      "mergedAt": "2020-11-19T05:13:34Z",
+      "mergedBy": "larseggert",
+      "mergeCommit": {
+        "oid": "b8110cabbcf450aeff1a50e7aadc142aabba3ea2"
+      },
       "comments": [],
       "reviews": [
         {
@@ -1332,6 +2085,87 @@
           "body": "",
           "createdAt": "2020-11-18T22:31:24Z",
           "updatedAt": "2020-11-18T22:31:24Z",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "number": 22,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTI0MTA0ODAx",
+      "title": "Fix markdown and capitalization/punctuation inconsistencies",
+      "url": "https://github.com/NTAP/rfc8312bis/pull/22",
+      "state": "MERGED",
+      "author": "larseggert",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "that were  introduced in #12",
+      "createdAt": "2020-11-19T17:10:20Z",
+      "updatedAt": "2020-11-19T17:12:57Z",
+      "baseRepository": "NTAP/rfc8312bis",
+      "baseRefName": "main",
+      "baseRefOid": "a0d86c209eeb1fe9597beeca7f89b7d66cf41b98",
+      "headRepository": "NTAP/rfc8312bis",
+      "headRefName": "fix-definitions-markdown",
+      "headRefOid": "e4676c08c0d4023525017524f03956074a5e1f64",
+      "closedAt": "2020-11-19T17:12:54Z",
+      "mergedAt": "2020-11-19T17:12:54Z",
+      "mergedBy": "larseggert",
+      "mergeCommit": {
+        "oid": "14c3ad8e5141acf1d65b1e1e00f5070ac52807a2"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 24,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTI1MDk1NTIy",
+      "title": "AIMD approach for tcp friendly window",
+      "url": "https://github.com/NTAP/rfc8312bis/pull/24",
+      "state": "OPEN",
+      "author": "goelvidhi",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "Closes #20 .\r\n\r\nWill add the change log once the pending PR #3 is merged to avoid conflict.",
+      "createdAt": "2020-11-21T07:53:04Z",
+      "updatedAt": "2020-11-21T18:57:18Z",
+      "baseRepository": "NTAP/rfc8312bis",
+      "baseRefName": "main",
+      "baseRefOid": "14c3ad8e5141acf1d65b1e1e00f5070ac52807a2",
+      "headRepository": "goelvidhi/rfc8312bis",
+      "headRefName": "tf-aimd-reno",
+      "headRefOid": "ce7d70956851f6c6e72c01f37e9a504937cb5903",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1OTcxOTMw",
+          "commit": {
+            "abbreviatedOid": "ce7d709"
+          },
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "Thank you, Vidhi!",
+          "createdAt": "2020-11-21T15:01:18Z",
+          "updatedAt": "2020-11-21T15:01:18Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTM1OTg4MjY0",
+          "commit": {
+            "abbreviatedOid": "ce7d709"
+          },
+          "author": "sangtaeha",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "This looks good. Thanks!",
+          "createdAt": "2020-11-21T18:57:18Z",
+          "updatedAt": "2020-11-21T18:57:18Z",
           "comments": []
         }
       ]
