@@ -340,6 +340,10 @@ W_cubic(t):
 : Target value of the congestion window in segments at time t in seconds
   based on the cubic increase function as described in {{win-inc}}
 
+target:
+: Target value of congestion window in segments after the next RTT,
+  that is, W_cubic(t+RTT) as described in {{win-inc}}
+
 W_est(t):
 : An estimate for the congestion window in segments at time t in seconds
   in the TCP-friendly region, that is, an estimate for the congestion
@@ -363,23 +367,36 @@ CUBIC uses the following window increase function:
 ~~~
 
 where t is the elapsed time in seconds from the beginning of the
-current congestion avoidance, and K is the time
+current congestion avoidance stage, and K is the time
 period that the above function takes to increase the current window
 size to W_max if there are no further congestion events and is
 calculated using the following equation:
 
 ~~~
-    K = cubic_root(W_max * (1 - beta_cubic) / C)      (Eq. 2)
+    K = cubic_root((W_max - cwnd) / C)                (Eq. 2)
 ~~~
 
-where beta_cubic is the CUBIC multiplication decrease factor, that
-is, when a congestion event is detected, CUBIC reduces its cwnd to
-W_cubic(0)=W_max*beta_cubic. We discuss how we set beta_cubic in
-{{mult-dec}} and how we set C in {{discussion}}.
+where cwnd is the congestion window at the beginning of the current
+congestion avoidance stage. The cwnd is calculated as described in
+{{mult-dec}} when a congestion event is detected, although
+implementations can further adjust the cwnd based on other fast
+recovery mechanisms. In special cases, if the cwnd is greater than
+W_max, K is set to 0.
 
 Upon receiving an ACK during congestion avoidance, CUBIC computes the
-window increase rate during the next RTT period using Eq. 1. It sets
-W_cubic(t+RTT) as the candidate target value of the congestion window.
+target congestion window size after the next RTT using Eq. 1 as
+follows, where RTT is the smoothed round-trip time. The lower and upper
+bounds below ensure that CUBIC's congestion window increase rate is
+non-decreasing and is less than the increase rate of slow start.
+
+~~~
+    target = W_cubic(t + RTT)         // cwnd after an RTT
+    if (target < cwnd) {              // lower bound
+        target = cwnd
+    } else if (target > 1.5 * cwnd) { // upper bound
+        target = 1.5 * cwnd
+    }
+~~~
 
 Depending on the value of the current congestion window size cwnd,
 CUBIC runs in three different modes.
@@ -438,8 +455,8 @@ be set to W_est(t) at each reception of an ACK.
 When receiving an ACK in congestion avoidance, if CUBIC is not in the
 TCP-friendly region and cwnd is less than W_max, then CUBIC is in the
 concave region. In this region, cwnd MUST be incremented by
-(W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-W_cubic(t+RTT) is calculated using Eq. 1.
+(target - cwnd)/cwnd for each received ACK, where target is
+calculated as described in {{win-inc}}.
 
 ## Convex Region
 
@@ -456,8 +473,8 @@ profile ensures that the window increases very slowly at the
 beginning and gradually increases its increase rate. We also call
 this region the "maximum probing phase" since CUBIC is searching for
 a new W_max. In this region, cwnd MUST be incremented by
-(W_cubic(t+RTT) - cwnd)/cwnd for each received ACK, where
-W_cubic(t+RTT) is calculated using Eq. 1.
+(target - cwnd)/cwnd for each received ACK, where target is
+calculated as described in {{win-inc}}.
 
 ## Multiplicative Decrease {#mult-dec}
 
@@ -778,9 +795,10 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 ## Since draft-eggert-tcpm-rfc8312bis-00
 
-- acknowledge former co-authors (#18)
-- prevent cwnd from becoming less than two (#9)
-- add list of variables and constants (#12)
+- acknowledge former co-authors (#15)
+- prevent cwnd from becoming less than two (#7)
+- add list of variables and constants (#5, #6)
+- update K's definition and add bounds for CUBIC target cwnd (#1, #14)
 
 ## Since RFC8312
 
