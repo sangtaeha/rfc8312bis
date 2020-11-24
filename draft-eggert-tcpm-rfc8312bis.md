@@ -344,10 +344,10 @@ target:
 : Target value of congestion window in segments after the next RTT,
   that is, W_cubic(t+RTT) as described in {{win-inc}}
 
-W_est(t):
-: An estimate for the congestion window in segments at time t in seconds
-  in the TCP-friendly region, that is, an estimate for the congestion
-  window if the TCP-NewReno congestion controller was used
+W_est:
+: An estimate for the congestion window in segments in the TCP-friendly
+  region, that is, an estimate for the congestion window using the AIMD
+  approach similar to TCP-NewReno congestion controller
 
 ## Window Increase Function {#win-inc}
 
@@ -441,13 +441,15 @@ alpha_aimd=3*(1-beta_cubic)/(1+beta_cubic) and beta_aimd=beta_cubic,
 which achieves the same average window size as Standard TCP. When
 receiving an ACK in congestion avoidance (cwnd could be greater than
 or less than W_max), CUBIC checks whether W_cubic(t) is less than
-W_est(t). If so, CUBIC is in the TCP-friendly region and cwnd SHOULD
-be set to W_est(t) at each reception of an ACK.
+W_est. If so, CUBIC is in the TCP-friendly region and cwnd SHOULD
+be set to W_est at each reception of an ACK.
+
+W_est is set equal to cwnd at the start of the congestion avoidance
+stage. After that, on every ACK, W_est is updated using Eq. 4.
 
 ~~~
-    W_est(t) = W_max * beta_cubic +
-               [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
-               (t / RTT)                              (Eq. 4)
+    W_est = W_est + [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
+             (segments_acked / cwnd)                  (Eq. 4)
 ~~~
 
 ## Concave Region
@@ -799,6 +801,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - prevent cwnd from becoming less than two (#7)
 - add list of variables and constants (#5, #6)
 - update K's definition and add bounds for CUBIC target cwnd (#1, #14)
+- update W_est to use AIMD approach (#20)
 
 ## Since RFC8312
 
