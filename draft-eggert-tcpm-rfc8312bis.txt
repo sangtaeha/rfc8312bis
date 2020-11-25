@@ -6,9 +6,9 @@ TCPM                                                               L. Xu
 Internet-Draft                                                       UNL
 Obsoletes: 8312 (if approved)                                      S. Ha
 Intended status: Standards Track                                Colorado
-Expires: 28 May 2021                                      L. Eggert, Ed.
+Expires: 29 May 2021                                      L. Eggert, Ed.
                                                                   NetApp
-                                                        24 November 2020
+                                                        25 November 2020
 
 
                  CUBIC for Fast Long-Distance Networks
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 May 2021.
+   This Internet-Draft will expire on 29 May 2021.
 
 Copyright Notice
 
@@ -874,6 +874,8 @@ B.2.  Since RFC8312
    *  updated author information
 
    *  various whitespace changes
+
+   *  move to Standards Track
 
 Authors' Addresses
 
