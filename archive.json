@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-26T00:02:14.257596+00:00",
+  "timestamp": "2020-11-29T00:02:22.870537+00:00",
   "repo": "NTAP/rfc8312bis",
   "labels": [
     {
@@ -2340,6 +2340,66 @@
       },
       "comments": [],
       "reviews": []
+    },
+    {
+      "number": 26,
+      "id": "MDExOlB1bGxSZXF1ZXN0NTI3Nzk1NDA4",
+      "title": "set alpha_aimd to 1 when W_est is bigger than W_max",
+      "url": "https://github.com/NTAP/rfc8312bis/pull/26",
+      "state": "OPEN",
+      "author": "goelvidhi",
+      "authorAssociation": "COLLABORATOR",
+      "assignees": [],
+      "labels": [],
+      "body": "I have update Eq. 3 to use alpha_aimd variable which is defined in the preceding paragraph as alpha_aimd=3*(1-beta_cubic)/(1+beta_cubic). Please let me know if alpha_aimd needs to be added to the Definitions sub section.\r\n\r\nCloses #2.",
+      "createdAt": "2020-11-26T03:15:17Z",
+      "updatedAt": "2020-11-28T08:25:33Z",
+      "baseRepository": "NTAP/rfc8312bis",
+      "baseRefName": "main",
+      "baseRefOid": "da5782958c9db7819610e25cadc6aef39a65d680",
+      "headRepository": "goelvidhi/rfc8312bis",
+      "headRefName": "tf-cwnd-after-Wmax",
+      "headRefOid": "613965255127176d0dfe09bc822e04158e2a8aef",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTQwMzQzNzkw",
+          "commit": {
+            "abbreviatedOid": "6139652"
+          },
+          "author": "lisongxu",
+          "authorAssociation": "COLLABORATOR",
+          "state": "APPROVED",
+          "body": "Thank you, Vidhi!",
+          "createdAt": "2020-11-28T05:16:37Z",
+          "updatedAt": "2020-11-28T05:16:37Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTQwMzUxNzE1",
+          "commit": {
+            "abbreviatedOid": "6139652"
+          },
+          "author": "larseggert",
+          "authorAssociation": "MEMBER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-28T08:24:58Z",
+          "updatedAt": "2020-11-28T08:25:10Z",
+          "comments": [
+            {
+              "originalPosition": 12,
+              "body": "Would it make sense to make alpha_aimd a function of W_est then?",
+              "createdAt": "2020-11-28T08:24:58Z",
+              "updatedAt": "2020-11-28T08:25:33Z"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
