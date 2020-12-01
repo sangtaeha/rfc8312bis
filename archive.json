@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2020-11-29T00:02:22.870537+00:00",
+  "timestamp": "2020-12-01T00:02:44.888460+00:00",
   "repo": "NTAP/rfc8312bis",
   "labels": [
     {
@@ -2353,7 +2353,7 @@
       "labels": [],
       "body": "I have update Eq. 3 to use alpha_aimd variable which is defined in the preceding paragraph as alpha_aimd=3*(1-beta_cubic)/(1+beta_cubic). Please let me know if alpha_aimd needs to be added to the Definitions sub section.\r\n\r\nCloses #2.",
       "createdAt": "2020-11-26T03:15:17Z",
-      "updatedAt": "2020-11-28T08:25:33Z",
+      "updatedAt": "2020-11-29T03:59:27Z",
       "baseRepository": "NTAP/rfc8312bis",
       "baseRefName": "main",
       "baseRefOid": "da5782958c9db7819610e25cadc6aef39a65d680",
@@ -2396,6 +2396,26 @@
               "body": "Would it make sense to make alpha_aimd a function of W_est then?",
               "createdAt": "2020-11-28T08:24:58Z",
               "updatedAt": "2020-11-28T08:25:33Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NTQwNDQ1MjU3",
+          "commit": {
+            "abbreviatedOid": "6139652"
+          },
+          "author": "goelvidhi",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2020-11-29T03:59:26Z",
+          "updatedAt": "2020-11-29T03:59:27Z",
+          "comments": [
+            {
+              "originalPosition": 12,
+              "body": "W_est uses alpha_aimd where alpha_aimd itself is a property/constant which is either 3 (1-beta) (1+beta) or 1 depending upon the current value of W_est - so, it is not a really a function of W_est but more like a component in the W_est formula which changes conditionally.",
+              "createdAt": "2020-11-29T03:59:26Z",
+              "updatedAt": "2020-11-29T03:59:27Z"
             }
           ]
         }
