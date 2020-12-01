@@ -448,9 +448,12 @@ W_est is set equal to cwnd at the start of the congestion avoidance
 stage. After that, on every ACK, W_est is updated using Eq. 4.
 
 ~~~
-    W_est = W_est + [3 * (1 - beta_cubic) / (1 + beta_cubic)] *
-             (segments_acked / cwnd)                  (Eq. 4)
+    W_est = W_est + alpha_aimd * (segments_acked / cwnd) (Eq. 4)
 ~~~
+
+Note that once W_est reaches W_max, that is, W_est >= W_max,
+alpha_aimd SHOULD be set to 1 to achieve the same congestion
+window size as standard TCP that uses AIMD.
 
 ## Concave Region
 
@@ -802,6 +805,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - add list of variables and constants (#5, #6)
 - update K's definition and add bounds for CUBIC target cwnd (#1, #14)
 - update W_est to use AIMD approach (#20)
+- set alpha_aimd to 1 once W_est reaches W_max (#2)
 
 ## Since RFC8312
 
