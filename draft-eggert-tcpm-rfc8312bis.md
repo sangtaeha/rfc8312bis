@@ -38,6 +38,15 @@ author:
   email: sangtae.ha@colorado.edu
   uri: "https://netstech.org/sangtaeha/"
 -
+  name: Vidhi Goel
+  org: Apple Inc.
+  street: One Apple Park Way
+  city: Cupertino
+  region: California
+  code: 95014
+  country: USA
+  email: vidhi_goel@apple.com
+-
   name: Lars Eggert
   org: NetApp
   street: Stenbergintie 12 B
@@ -806,6 +815,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - update K's definition and add bounds for CUBIC target cwnd (#1, #14)
 - update W_est to use AIMD approach (#20)
 - set alpha_aimd to 1 once W_est reaches W_max (#2)
+- add Vidhi as co-author (#17)
 
 ## Since RFC8312
 
