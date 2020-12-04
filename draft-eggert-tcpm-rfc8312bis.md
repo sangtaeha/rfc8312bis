@@ -114,18 +114,6 @@ informative:
     - name: Khaled Harfoush
     - name: Injong Rhee
 
-  SXEZ19:
-    title: Model-Agnostic and Efficient Exploration of Numerical State Space of
-Real-World TCP Congestion Control Implementations
-    date: 2019
-    seriesinfo:
-      USENIX NSDI: 2019
-    author:
-    - name: Wei Sun
-    - name: Lisong Xu
-    - name: Sebastian Elbaum
-    - name: Di Zhao
-
   CEHRX07:  DOI.10.1109/INFCOM.2007.111
   HRX08:    DOI.10.1145/1400097.1400105
   K03:      DOI.10.1145/956981.956989
@@ -819,7 +807,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 # History of Changes Since the Original Paper
 
-CUBIC has gone through a few changes since the initial release {{!HRX08}}
+CUBIC has gone through a few changes since the initial release {{?HRX08}}
 of its algorithm and implementation. Below we highlight the differences
 between its original paper and RFCs.
 
@@ -831,7 +819,7 @@ between its original paper and RFCs.
 - When W_est <= W_max, TCP friendly window emulates Standard TCP's
 throughput using segments or bytes received instead of time t.
 When W_est > W_max, it sets alpha_aimd to 1.
-- The bugs reported in {{?SXEZ19}} are fixed. CUBIC sets W_cubic(t + RTT)
+- The bugs reported are fixed. CUBIC sets W_cubic(t + RTT)
 as the target window size after the next RTT. However, this target may be
 too high, like even higher than 2 * cwnd (i.e., more aggressive than slow
 start) in the following cases: (1) RTT is extremely long; (2) after a long
@@ -857,7 +845,7 @@ recommended CUBIC constant C.
 
 ## Original Paper
 
-- The original paper {{!HRX08}} included the pseudocode of CUBIC implementation
+- The original paper {{?HRX08}} included the pseudocode of CUBIC implementation
 using Linux's pluggable congestion control framework, which excludes system-specific
 optimizations. The simplified pseudocode might be a good source to start with
 and understand CUBIC.
