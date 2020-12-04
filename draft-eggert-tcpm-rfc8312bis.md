@@ -115,7 +115,8 @@ informative:
     - name: Injong Rhee
 
   SXEZ19:
-    title: Model-Agnostic and Efficient Exploration of Numerical State Space of Real-World TCP Congestion Control Implementations
+    title: Model-Agnostic and Efficient Exploration of Numerical State Space of
+Real-World TCP Congestion Control Implementations
     date: 2019
     seriesinfo:
       USENIX NSDI: 2019
@@ -124,7 +125,6 @@ informative:
     - name: Lisong Xu
     - name: Sebastian Elbaum
     - name: Di Zhao
-
 
   CEHRX07:  DOI.10.1109/INFCOM.2007.111
   HRX08:    DOI.10.1145/1400097.1400105
