@@ -114,10 +114,21 @@ informative:
     - name: Khaled Harfoush
     - name: Injong Rhee
 
+  SXEZ19:
+    title: Model-Agnostic and Efficient Exploration of Numerical State Space of Real-World TCP Congestion Control Implementations
+    date: 2019
+    seriesinfo:
+      USENIX NSDI: 2019
+    author:
+    - name: Wei Sun
+    - name: Lisong Xu
+    - name: Sebastian Elbaum
+    - name: Di Zhao
+
+
   CEHRX07:  DOI.10.1109/INFCOM.2007.111
   HRX08:    DOI.10.1145/1400097.1400105
   K03:      DOI.10.1145/956981.956989
-  SXEZ19:  DOI.10.5555/3323234.3323292
 
 --- abstract
 
@@ -803,17 +814,17 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 <!-- Anyone else to acknowledge? -->
 
-# History of changes since the original paper
+# History of Changes Since the Original Paper
 
-CUBIC has gone through a few changes since the initial release of its
-algorithm and implementation. Below we highlight the differences
+CUBIC has gone through a few changes since the initial release {{!HRX08}}
+of its algorithm and implementation. Below we highlight the differences
 between its original paper and RFCs.
 
-## The current draft
+## The Current Draft
 
 - The list of variables and constants used for CUBIC has been added.
 - K formula has changed to cubic_root((W_max - cwnd)/C) whereas in the
-RFC8312 it was cubic_root(W_max * (1-beta_cubic)/C).
+{{?RFC8312}} it was cubic_root(W_max * (1-beta_cubic)/C).
 - When W_est <= W_max, TCP friendly window emulates Standard TCP's
 throughput using segments or bytes received instead of time t.
 When W_est > W_max, it sets alpha_aimd to 1.
@@ -830,21 +841,21 @@ rate of slow start.
 
 - It changed the definition of beta_cubic constant and thus updated the
 pseudocode of CUBIC accordingly. For example, beta_cubic in the original
-paper was the window decrease constant while RFC8312 changed it to CUBIC
+paper was the window decrease constant while {{!RFC8312}} changed it to CUBIC
 multiplication decrease factor. With this change, the current congestion
 window size after a loss event is beta_cubic * W_max while it was
 (1-beta_cubic) * W_max in the original paper.
 - It used W_max while the original paper's pseudocode used W_last_max.
-- TCP friendly window is called W_est in RFC8312, whereas it was W_tcp in
+- TCP friendly window is called W_est in {{!RFC8312}}, whereas it was W_tcp in
 the original paper.
 - It included the discussion on safety features of CUBIC, such as CUBIC's
 fairness in small and high bandwidth-delay product (BDP) networks and the
 recommended CUBIC constant C.
 
-## Original paper
+## Original Paper
 
-- The original paper included the pseudocode of CUBIC implementation using
-Linux's pluggable congestion control framework, which excludes system-specific
+- The original paper {{!HRX08}} included the pseudocode of CUBIC implementation
+using Linux's pluggable congestion control framework, which excludes system-specific
 optimizations. The simplified pseudocode might be a good source to start with
 and understand CUBIC.
 - It also includes experimental results showing its performance and fairness.
