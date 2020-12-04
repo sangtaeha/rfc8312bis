@@ -114,6 +114,19 @@ informative:
     - name: Khaled Harfoush
     - name: Injong Rhee
 
+  SXEZ19:
+    title:
+      Model-Agnostic and Efficient Exploration of Numerical State Space of
+      Real-World TCP Congestion Control Implementations
+    date: 2019
+    seriesinfo:
+      USENIX NSDI: 2019
+    author:
+    - name: Wei Sun
+    - name: Lisong Xu
+    - name: Sebastian Elbaum
+    - name: Di Zhao
+
   CEHRX07:  DOI.10.1109/INFCOM.2007.111
   HRX08:    DOI.10.1145/1400097.1400105
   K03:      DOI.10.1145/956981.956989
@@ -149,7 +162,7 @@ draft can be found at [](https://github.com/NTAP/rfc8312bis).
 # Introduction
 
 The low utilization problem of TCP in fast long-distance networks is
-well documented in {{?K03}} and {{?RFC3649}}. This problem arises from a
+well documented in {{K03}} and {{?RFC3649}}. This problem arises from a
 slow increase of the congestion window following a congestion event
 in a network with a large bandwidth-delay product (BDP). {{HKLRX06}}
 indicates that this problem is frequently observed even in the range
@@ -160,7 +173,7 @@ their variants, including TCP-Reno {{!RFC5681}}, TCP-NewReno
 use the same linear increase function for window growth, which we refer to
 collectively as "Standard TCP" below.
 
-CUBIC, originally proposed in {{?HRX08}}, is a modification to the
+CUBIC, originally proposed in {{HRX08}}, is a modification to the
 congestion control algorithm of Standard TCP to remedy this problem.
 This document describes the most recent specification of CUBIC.
 Specifically, CUBIC uses a cubic function instead of a linear window
@@ -214,7 +227,7 @@ decrease factor in order to balance between the scalability and
 convergence speed.
 
 Principle 1: For better network utilization and stability, CUBIC
-{{?HRX08}} uses a cubic window increase function in terms of the elapsed
+{{HRX08}} uses a cubic window increase function in terms of the elapsed
 time from the last congestion event. While most alternative
 congestion control algorithms to Standard TCP increase the congestion
 window using convex functions, CUBIC uses both the concave and convex
@@ -230,7 +243,7 @@ W_max so that the concave window increase continues until the window
 size becomes W_max. After that, the cubic function turns into a
 convex profile and the convex window increase begins. This style of
 window adjustment (concave and then convex) improves the algorithm
-stability while maintaining high network utilization {{?CEHRX07}}. This
+stability while maintaining high network utilization {{CEHRX07}}. This
 is because the window size remains almost constant, forming a plateau
 around W_max where network utilization is deemed highest. Under
 steady state, most window size samples of CUBIC are close to W_max,
@@ -807,7 +820,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 # History of Changes Since the Original Paper
 
-CUBIC has gone through a few changes since the initial release {{?HRX08}}
+CUBIC has gone through a few changes since the initial release {{HRX08}}
 of its algorithm and implementation. Below we highlight the differences
 between its original paper and RFCs.
 
@@ -819,7 +832,7 @@ between its original paper and RFCs.
 - When W_est <= W_max, TCP friendly window emulates Standard TCP's
 throughput using segments or bytes received instead of time t.
 When W_est > W_max, it sets alpha_aimd to 1.
-- The bugs reported are fixed. CUBIC sets W_cubic(t + RTT)
+- The bugs reported in {{SXEZ19}} are fixed. CUBIC sets W_cubic(t + RTT)
 as the target window size after the next RTT. However, this target may be
 too high, like even higher than 2 * cwnd (i.e., more aggressive than slow
 start) in the following cases: (1) RTT is extremely long; (2) after a long
@@ -845,7 +858,7 @@ recommended CUBIC constant C.
 
 ## Original Paper
 
-- The original paper {{?HRX08}} included the pseudocode of CUBIC implementation
+- The original paper {{HRX08}} included the pseudocode of CUBIC implementation
 using Linux's pluggable congestion control framework, which excludes system-specific
 optimizations. The simplified pseudocode might be a good source to start with
 and understand CUBIC.
