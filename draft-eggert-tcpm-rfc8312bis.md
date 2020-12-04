@@ -493,9 +493,12 @@ calculated as described in {{win-inc}}.
 ## Multiplicative Decrease {#mult-dec}
 
 When a packet loss is detected by duplicate ACKs or a network
-congestion is detected by ECN-Echo ACKs, CUBIC updates its W_max,
-cwnd, and ssthresh as follows. Parameter beta_cubic SHOULD be set to
-0.7.
+congestion is detected by receiving packets marked with ECN-Echo (ECE),
+CUBIC updates its W_max and reduces its cwnd and ssthresh immediately
+as below. For both packet loss and congestion detection through ECN,
+the sender MAY employ a fast recovery algorithm to gradually adjust the
+congestion window to its new reduced value. Parameter beta_cubic
+SHOULD be set to 0.7.
 
 ~~~
     W_max = cwnd                 // save window size before reduction
@@ -816,6 +819,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - update W_est to use AIMD approach (#20)
 - set alpha_aimd to 1 once W_est reaches W_max (#2)
 - add Vidhi as co-author (#17)
+- note for fast recovery during cwnd decrease due to congestion event (#11)
 
 ## Since RFC8312
 
