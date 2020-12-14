@@ -341,6 +341,12 @@ K:
 : The time period in seconds it takes to increase the current congestion
   window size to W_max
 
+current_time
+: Current time of the system in seconds
+
+epoch_start:
+: The time in seconds at which the current congestion avoidance stage starts
+
 W_cubic(t):
 : Target value of the congestion window in segments at time t in seconds
   based on the cubic increase function as described in {{win-inc}}
@@ -372,10 +378,12 @@ CUBIC uses the following window increase function:
 ~~~
 
 where t is the elapsed time in seconds from the beginning of the
-current congestion avoidance stage, and K is the time
-period that the above function takes to increase the current window
-size to W_max if there are no further congestion events and is
-calculated using the following equation:
+current congestion avoidance stage, that is, t = (current_time -
+epoch_start), where epoch_start is the time at which the current
+congestion avoidance stage starts. K is the time period that the
+above function takes to increase the current window size to W_max
+if there are no further congestion events and is calculated using
+the following equation:
 
 ~~~
     K = cubic_root((W_max - cwnd) / C)                (Eq. 2)
@@ -556,6 +564,53 @@ K is set to 0, and W_max is set to the congestion window size at the
 beginning of the current congestion avoidance. In addition, for the
 tcp-friendliness region, W_est should be set to the congestion window
 size at the beginning of the current congestion avoidance.
+
+## Spurious Loss events
+
+For the case where CUBIC reduces its congestion window in response
+to detection of packet loss via duplicate ACKs or timeout, there is a
+possibility that the missing ACK would arrive after the congestion
+window reduction and the corresponding packet retransmission. For
+example, packet reordering which is common in networks could trigger
+this behavior. A high degree of packet reordering could cause multiple
+events of congestion window reduction where spurious losses are
+incorrectly interpreted as congestion signals, thus degrading CUBIC's
+performance significantly.
+
+When there is a loss event, A CUBIC implementation SHOULD save the current
+value of the following variables before the congestion window reduction.
+
+~~~
+    prior_cwnd = cwnd
+    prior_ssthresh = ssthresh
+    prior_W_max = W_max
+    prior_K = K
+    prior_epoch_start = epoch_start
+    prior_W_est = W_est
+~~~
+
+CUBIC MAY implement an algorithm to detect spurious retransmissions,
+such as DSACK {{?RFC3708}}, Forward RTO-Recovery {{?RFC5682}} or
+Eifel {{?RFC3522}}. Once a spurious loss event is detected, CUBIC SHOULD
+restore the original values of above mentioned variables as follows if
+the current cwnd is lower than the prior_cwnd. Restoring to the original
+values ensures that CUBIC's performance is similar to what it would be
+if there were no spurious losses.
+
+~~~
+    if (cwnd < prior_cwnd) {
+        cwnd = prior_cwnd
+        ssthresh = prior_ssthresh
+        W_max = prior_W_max
+        K = prior_K
+        epoch_start = prior_epoch_start
+        W_est = prior_W_est
+    }
+~~~
+
+In rare cases, when the detection happens long after a spurious loss event
+and the current cwnd is already higher than the prior_cwnd, CUBIC SHOULD
+continue to use the current and the most recent values of these variables.
 
 ## Slow Start
 
@@ -807,6 +862,8 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - add Vidhi as co-author ([#17](https://github.com/NTAP/rfc8312bis/issues/17))
 - note for fast recovery during cwnd decrease due to congestion event
   ([#11](https://github.com/NTAP/rfc8312bis11/issues/11))
+- add section for Spurious Loss events
+  ([#23] (https://github.com/NTAP/rfc8312bis/issues/23))
 - initialize W_est after timeout and remove variable W_last_max ([#28](https://github.com/NTAP/rfc8312bis/issues/28))
 
 ## Since RFC8312
