@@ -857,7 +857,7 @@ When W_est > W_max, it sets alpha_aimd to 1 (#2).
 
 CUBIC has gone through a few changes since the initial release {{HRX08}}
 of its algorithm and implementation. Below we highlight the differences
-between its original paper and {{?RF8312}}.
+between its original paper and {{?RFC8312}}.
 
 - The original paper {{HRX08}} included the pseudocode of CUBIC implementation
 using Linux's pluggable congestion control framework, which excludes system-specific
@@ -867,7 +867,7 @@ and understand CUBIC.
 - The definition of beta_cubic constant was changed in {{?RFC8312}}.
 For example, beta_cubic in the original paper was the window decrease constant
 while {{?RFC8312}} changed it to CUBIC multiplication decrease factor.
-With this change, the current congestion window size after a loss event in {{?RF8312}
+With this change, the current congestion window size after a loss event in {{?RFC8312}}
 was beta_cubic * W_max while it was (1-beta_cubic) * W_max in the original paper.
-- Its pseudocode used W_last_max while {{?RF8312}} used W_max.
-- Its TCP friendly window was W_tcp while {{?RF8312}} used W_est.
+- Its pseudocode used W_last_max while {{?RFC8312}} used W_max.
+- Its TCP friendly window was W_tcp while {{?RFC8312}} used W_est.
