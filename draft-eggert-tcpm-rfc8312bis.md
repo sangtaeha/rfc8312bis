@@ -818,52 +818,6 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 
 <!-- Anyone else to acknowledge? -->
 
-# History of Changes Since the Original Paper
-
-CUBIC has gone through a few changes since the initial release {{HRX08}}
-of its algorithm and implementation. Below we highlight the differences
-between its original paper and RFCs.
-
-## The Current Draft
-
-- The list of variables and constants used for CUBIC has been added.
-- K formula has changed to cubic_root((W_max - cwnd)/C) whereas in the
-{{?RFC8312}} it was cubic_root(W_max * (1-beta_cubic)/C).
-- When W_est <= W_max, TCP friendly window emulates Standard TCP's
-throughput using segments or bytes received instead of time t.
-When W_est > W_max, it sets alpha_aimd to 1.
-- The bugs reported in {{SXEZ19}} are fixed. CUBIC sets W_cubic(t + RTT)
-as the target window size after the next RTT. However, this target may be
-too high, like even higher than 2 * cwnd (i.e., more aggressive than slow
-start) in the following cases: (1) RTT is extremely long; (2) after a long
-idle period; and (3) after a long application rate-limited period.
-To address this issue, CUBIC now has lower and upper bounds to ensure that
-the window increase rate is non-decreasing and is less than the increase
-rate of slow start.
-
-## RFC 8312
-
-- It changed the definition of beta_cubic constant and thus updated the
-pseudocode of CUBIC accordingly. For example, beta_cubic in the original
-paper was the window decrease constant while {{!RFC8312}} changed it to CUBIC
-multiplication decrease factor. With this change, the current congestion
-window size after a loss event is beta_cubic * W_max while it was
-(1-beta_cubic) * W_max in the original paper.
-- It used W_max while the original paper's pseudocode used W_last_max.
-- TCP friendly window is called W_est in {{!RFC8312}}, whereas it was W_tcp in
-the original paper.
-- It included the discussion on safety features of CUBIC, such as CUBIC's
-fairness in small and high bandwidth-delay product (BDP) networks and the
-recommended CUBIC constant C.
-
-## Original Paper
-
-- The original paper {{HRX08}} included the pseudocode of CUBIC implementation
-using Linux's pluggable congestion control framework, which excludes system-specific
-optimizations. The simplified pseudocode might be a good source to start with
-and understand CUBIC.
-- It also includes experimental results showing its performance and fairness.
-
 # Changes from RFC8312
 
 <!-- For future PRs, please include a bullet below that summarizes the change
@@ -873,10 +827,20 @@ and understand CUBIC.
 
 - acknowledge former co-authors (#15)
 - prevent cwnd from becoming less than two (#7)
-- add list of variables and constants (#5, #6)
-- update K's definition and add bounds for CUBIC target cwnd (#1, #14)
-- update W_est to use AIMD approach (#20)
-- set alpha_aimd to 1 once W_est reaches W_max (#2)
+- The list of variables and constants used for CUBIC has been added (#5, #6)
+- K formula has changed to cubic_root((W_max - cwnd)/C) whereas in the
+{{?RFC8312}} it was cubic_root(W_max * (1-beta_cubic)/C) (#1)
+- The bugs reported in {{SXEZ19}} are fixed. CUBIC sets W_cubic(t + RTT)
+as the target window size after the next RTT. However, this target may be
+too high, like even higher than 2 * cwnd (i.e., more aggressive than slow
+start) in the following cases: (1) RTT is extremely long; (2) after a long
+idle period; and (3) after a long application rate-limited period.
+To address this issue, CUBIC now has lower and upper bounds to ensure that
+the window increase rate is non-decreasing and is less than the increase
+rate of slow start (#14)
+- When W_est <= W_max, TCP friendly window emulates Standard TCP's
+throughput using segments or bytes received instead of time t (#20).
+When W_est > W_max, it sets alpha_aimd to 1 (#2).
 - add Vidhi as co-author (#17)
 - highlight difference to paper (#10)
 - note for fast recovery during cwnd decrease due to congestion event (#11)
@@ -888,3 +852,22 @@ and understand CUBIC.
 - updated author information
 - various whitespace changes
 - move to Standards Track
+
+# Changes from the Original Paper
+
+CUBIC has gone through a few changes since the initial release {{HRX08}}
+of its algorithm and implementation. Below we highlight the differences
+between its original paper and {{?RF8312}}.
+
+- The original paper {{HRX08}} included the pseudocode of CUBIC implementation
+using Linux's pluggable congestion control framework, which excludes system-specific
+optimizations. The simplified pseudocode might be a good source to start with
+and understand CUBIC.
+- It also includes experimental results showing its performance and fairness.
+- The definition of beta_cubic constant was changed in {{?RFC8312}}.
+For example, beta_cubic in the original paper was the window decrease constant
+while {{?RFC8312}} changed it to CUBIC multiplication decrease factor.
+With this change, the current congestion window size after a loss event in {{?RF8312}
+was beta_cubic * W_max while it was (1-beta_cubic) * W_max in the original paper.
+- Its pseudocode used W_last_max while {{?RF8312}} used W_max.
+- Its TCP friendly window was W_tcp while {{?RF8312}} used W_est.
