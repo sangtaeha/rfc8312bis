@@ -337,10 +337,6 @@ W_max:
 : Size of the cwnd in segments just before the cwnd is reduced in the
   last congestion event
 
-W_last_max:
-: Last value of W_max in segments before W_max is updated for the current
-  congestion event
-
 K:
 : The time period in seconds it takes to increase the current congestion
   window size to W_max
@@ -501,7 +497,6 @@ congestion window to its new reduced value. Parameter beta_cubic
 SHOULD be set to 0.7.
 
 ~~~
-    W_max = cwnd                 // save window size before reduction
     ssthresh = cwnd * beta_cubic // new slow-start threshold
     ssthresh = max(ssthresh, 2)  // threshold is at least 2 MSS
     cwnd = ssthresh              // window reduction
@@ -523,28 +518,25 @@ bandwidth of the network. To speed up this bandwidth release by
 existing flows, the following mechanism called "fast convergence"
 SHOULD be implemented.
 
-With fast convergence, when a congestion event occurs, before the
-window reduction of the congestion window, a flow remembers the last
-value of W_max before it updates W_max for the current congestion
-event. Let us call the last value of W_max to be W_last_max.
+With fast convergence, when a congestion event occurs, we update W_max
+as follows before the window reduction as described in Section 4.5.
 
 ~~~
-    if (W_max < W_last_max) {       // should we make room for others
-        W_last_max = W_max                // remember the last W_max
-        W_max = W_max * (1.0 + beta_cubic) / 2.0  // further reduce
-    } else {
-        W_last_max = W_max                // remember the last W_max
-    }
+      if (cwnd < W_max){                        // should we make room for others
+          W_max = W_max*(1.0+beta_cubic)/2.0;   // further reduce W_max
+      } else {
+          W_max = cwnd                          // remember cwnd before reduction
+      }
 ~~~
 
-At a congestion event, if the current value of W_max is less than
-W_last_max, this indicates that the saturation point experienced by
-this flow is getting reduced because of the change in available
-bandwidth. Then we allow this flow to release more bandwidth by
-reducing W_max further. This action effectively lengthens the time
-for this flow to increase its congestion window because the reduced
-W_max forces the flow to have the plateau earlier. This allows more
-time for the new flow to catch up to its congestion window size.
+At a congestion event, if the current cwnd is less than W_max, this
+indicates that the saturation point experienced by this flow is getting
+reduced because of the change in available bandwidth.  Then we allow
+this flow to release more bandwidth by reducing W_max further.  This
+action effectively lengthens the time for this flow to increase its
+congestion window because the reduced W_max forces the flow to have
+the plateau earlier.  This allows more time for the new flow to catch
+up to its congestion window size.
 
 The fast convergence is designed for network environments with
 multiple CUBIC flows. In network environments with only a single
@@ -561,7 +553,9 @@ During the first congestion avoidance after a timeout, CUBIC
 increases its congestion window size using Eq. 1, where t is the
 elapsed time since the beginning of the current congestion avoidance,
 K is set to 0, and W_max is set to the congestion window size at the
-beginning of the current congestion avoidance.
+beginning of the current congestion avoidance. In addition, for the
+tcp-friendliness region, W_est should be set to the congestion window
+size at the beginning of the current congestion avoidance.
 
 ## Slow Start
 
@@ -813,6 +807,7 @@ Richard Scheffenegger and Alexander Zimmermann originally co-authored
 - add Vidhi as co-author ([#17](https://github.com/NTAP/rfc8312bis/issues/17))
 - note for fast recovery during cwnd decrease due to congestion event
   ([#11](https://github.com/NTAP/rfc8312bis11/issues/11))
+- initialize W_est after timeout and remove variable W_last_max ([#28](https://github.com/NTAP/rfc8312bis/issues/28))
 
 ## Since RFC8312
 
